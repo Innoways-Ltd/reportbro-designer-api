@@ -64,7 +64,7 @@ ruff = "^0.8.0"
 [[tool.poetry.source]]
 name = "aliyun"
 url = "https://mirrors.aliyun.com/pypi/simple"
-priority = "default"
+priority = "primary"
 
 
 [tool.pytest.ini_options]

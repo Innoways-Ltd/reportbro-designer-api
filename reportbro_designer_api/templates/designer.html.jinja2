@@ -14,9 +14,15 @@
 <script type="text/javascript">
 var tid = "{{ tid|safe }}";
 var version_id = "{{ version_id|safe }}";
+var is_default = {{ is_default|tojson }};
 
 function saveReport() {
     var report = rb.getReport();
+    if (is_default) {
+        window.parent.postMessage({ type: "reportSaved", payload: report }, "*");
+        rb.setModified(false);
+        return;
+    }
     if (version_id.length > 0) {
         version_id = "?version_id=" + version_id;
     }
@@ -57,5 +63,10 @@ const rb = new ReportBro(document.getElementById('reportbro'), {
 if (report) {
     rb.load(report);
 }
+window.addEventListener("message", function (event) {
+  if (event.data?.type === "saveReport") {
+    saveReport();
+  }
+});
 </script>
 {% endblock %}

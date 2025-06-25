@@ -8,6 +8,7 @@
 """
 import json
 from functools import lru_cache
+from typing import Any
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
@@ -31,9 +32,12 @@ from .utils.s3_client import S3Client
 FONTS_LOADER = ReportFontsLoader(settings.FONTS_PATH)
 
 
-def load_default_template():
+def load_default_template(purpose: str = "init") -> Any:
     """Load default template."""
-    tmp_path = settings.STATIC_PATH + "/default_template.json"
+    if purpose == "init":
+        tmp_path = settings.STATIC_PATH + "/default_template_init.json"
+    else:
+        tmp_path = settings.STATIC_PATH + "/default_template.json"
     if settings.DEFAULT_TEMPLATE_PATH:
         tmp_path = settings.DEFAULT_TEMPLATE_PATH
 
@@ -176,6 +180,10 @@ def get_meth_cli() -> BackendBase:
         return create_s3_backend(settings.DB_URL)
     else:
         return create_db_backend(settings.DB_URL)
+    
+def get_default_report_cli() -> Any:
+    """获取连接."""
+    return load_default_template('init')
 
 
 def create_local_storage(db_url):
