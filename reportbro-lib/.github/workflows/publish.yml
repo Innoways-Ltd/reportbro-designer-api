@@ -1,0 +1,42 @@
+name: Publish
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      actions: read
+      checks: write
+      issues: read
+      packages: write
+      pull-requests: read
+      repository-projects: read
+      statuses: read
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: Load cached $HOME/.local
+      uses: actions/cache@v4
+      with:
+        path: ~/.local
+        key: dotlocal-${{ runner.os }}-${{ hashFiles('.github/workflows/publish.yml') }}
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+    - name: Build and publish
+      run: |
+        poetry publish --build --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }}
+    - name: Upload Release Assets
+      uses: alexellis/upload-assets@0.4.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        asset_paths: '["dist/reportbro_lib-*.whl", "dist/reportbro-lib-*.tar.gz"]'
