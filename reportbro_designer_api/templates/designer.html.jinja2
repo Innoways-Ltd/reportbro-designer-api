@@ -14,7 +14,7 @@
 <script type="text/javascript">
 var tid = "{{ tid|safe }}";
 var version_id = "{{ version_id|safe }}";
-var is_default = {{ is_default|tojson }};
+var is_default = {{ is_default|default(false)|tojson }};
 
 function saveReport() {
     var report = rb.getReport();
@@ -58,7 +58,9 @@ const rb = new ReportBro(document.getElementById('reportbro'), {
         { name: 'Courier', value: "courier" },
         { name: 'Helvetica', value: "helvetica" },
         { name: 'Times New Roman', value: "times" },
-    ]
+    ],
+    showPlusFeatures: true,
+    showPlusFeaturesInfo: false,
 });
 if (report) {
     rb.load(report);
