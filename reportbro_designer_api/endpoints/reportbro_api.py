@@ -395,7 +395,7 @@ def gen_file_from_report(
     now = datetime.now().strftime("%Y%m%d%H%M%S")
     try:
         if output_format == "pdf":
-            report_file = report.generate_pdf(title=settings.PDF_TITLE)
+            report_file = report.generate_pdf(title=settings.PDF_TITLE, add_watermark=True)
             filename = "report-" + str(now) + ".pdf"
             assert isinstance(report_file, bytearray)
             return filename, bytes(report_file)

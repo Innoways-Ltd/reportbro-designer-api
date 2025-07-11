@@ -26,6 +26,8 @@ from babel import Locale
 from datetime import datetime
 from io import BufferedReader, IOBase
 from urllib import request
+import importlib.resources
+import importlib.resources
 
 from .containers import ReportBand
 from .elements import *
@@ -57,6 +59,7 @@ class DocumentPDFRenderer:
         self.page_limit = page_limit
         self.page_count = 0
         self.creation_date = report.creation_date
+        self.watermarks = report.watermarks  # Store reference to watermark elements
 
     def add_page(self):
         self.pdf_doc.add_page()
@@ -69,9 +72,17 @@ class DocumentPDFRenderer:
         return self.content_band.is_finished()
 
     def render(self):
+        # Prepare watermarks if they exist
+        watermark_elements = []
+        if self.watermarks:
+            for watermark in self.watermarks:
+                watermark.prepare(self.context, self.pdf_doc, only_verify=False)
+                watermark_elements.append(watermark)
+        
+        # Legacy static watermark support
         watermark_width = watermark_height = 0
         watermark_filename = None
-        if self.add_watermark:
+        if self.add_watermark and not watermark_elements:  # Only use static if no dynamic watermarks
             with importlib.resources.path('reportbro.data', 'logo_watermark.png') as p:
                 watermark_filename = p
                 if watermark_filename.exists():
@@ -104,7 +115,14 @@ class DocumentPDFRenderer:
         # render at least one page to show header/footer even if content is empty
         while not self.content_band.is_finished() or self.context.get_page_number() == 0:
             self.add_page()
-            if self.add_watermark:
+            
+            # Render background watermarks first (showInForeground = False)
+            for watermark in watermark_elements:
+                if not watermark.show_in_foreground and watermark.is_printed(self.context):
+                    watermark.render_watermark(self.pdf_doc)
+            
+            # Legacy static watermark (background only)
+            if self.add_watermark and not watermark_elements:
                 if watermark_height < self.document_properties.page_height:
                     self.pdf_doc.image(
                         watermark_filename,
@@ -133,6 +151,11 @@ class DocumentPDFRenderer:
 
             self.content_band.render_pdf(
                 self.document_properties.margin_left, content_offset_y, self.pdf_doc, cleanup=True)
+            
+            # Render foreground watermarks last (showInForeground = True)
+            for watermark in watermark_elements:
+                if watermark.show_in_foreground and watermark.is_printed(self.context):
+                    watermark.render_watermark(self.pdf_doc)
 
         self.header_band.cleanup()
         self.footer_band.cleanup()
@@ -589,6 +612,7 @@ class Report:
         self.header = ReportBand(BandType.header, '0_header', self.containers, self)
         self.content = ReportBand(BandType.content, '0_content', self.containers, self)
         self.footer = ReportBand(BandType.footer, '0_footer', self.containers, self)
+        self.watermarks = []  # Store watermark elements separately
         self.page_count = 0
 
         self.parameters = dict()
@@ -647,7 +671,8 @@ class Report:
         # do not init elements in case of existing errors as this could cause an exception
         # (e.g. wrong parameter value type in case of duplicate parameter)
         if not self.errors:
-            for doc_element in report_definition.get('docElements'):
+            # Process regular document elements
+            for doc_element in report_definition.get('docElements', []):
                 element_type = DocElementType[doc_element.get('elementType')]
                 container_id = str(doc_element.get('containerId'))
                 container = None
@@ -684,6 +709,19 @@ class Report:
                         elif elem.y + elem.height > container.height:
                             self.errors.append(Error('errorMsgInvalidSize', object_id=elem.id, field='height'))
                     container.add(elem)
+
+            # Process watermarks separately from the dedicated watermarks section
+            for watermark_element in report_definition.get('watermarks', []):
+                element_type = DocElementType[watermark_element.get('elementType')]
+                elem = None
+                if element_type == DocElementType.watermark_text:
+                    elem = WatermarkTextElement(self, watermark_element)
+                elif element_type == DocElementType.watermark_image:
+                    elem = WatermarkImageElement(self, watermark_element)
+
+                if elem:
+                    # Watermarks are stored separately and not added to containers
+                    self.watermarks.append(elem)
 
             self.context = Context(self, self.parameters, self.data, custom_functions=custom_functions)
             self.process_data(dest_data=self.data, src_data=data, parameters=parameter_list,

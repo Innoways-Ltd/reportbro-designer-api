@@ -7,6 +7,7 @@ import copy
 import datetime
 import decimal
 import json
+import math
 import PIL
 import PIL.Image
 import qrcode
@@ -2219,3 +2220,214 @@ class RichTextLine(object):
         # Add link if present
         if self.link:
             pdf_doc.link(render_x, y, self.width, self.base_style.font_size, self.link)
+
+
+class WatermarkTextElement(DocElement):
+    """Watermark text element for rendering text watermarks on pages."""
+    
+    def __init__(self, report, data):
+        DocElement.__init__(self, report, data)
+        self.content = get_str_value(data, 'content')
+        self.eval = bool(data.get('eval'))
+        
+        # Style properties
+        if data.get('styleId'):
+            style = report.styles.get(get_int_value(data, 'styleId'))
+            if style is None:
+                raise ReportBroInternalError(f'Style for watermark text element {self.id} not found', log_error=False)
+            self.style = style
+        else:
+            self.style = TextStyle(data, id_suffix='_watermark_text')
+        
+        # Watermark specific properties
+        self.opacity = data.get('opacity', 30)  # Default 30% opacity
+        if self.opacity:
+            self.opacity = int(self.opacity)
+        else:
+            self.opacity = 30
+        self.rotate_deg = data.get('rotateDeg', 0)  # Rotation in degrees
+        if self.rotate_deg:
+            self.rotate_deg = int(self.rotate_deg)
+        else:
+            self.rotate_deg = 0
+        self.show_in_foreground = bool(data.get('showInForeground', False))
+        self.print_if = get_str_value(data, 'printIf')
+        
+        self.prepared_content = None
+
+    def prepare(self, ctx, pdf_doc, only_verify):
+        """Prepare the watermark text content by evaluating expressions."""
+        if self.eval:
+            self.prepared_content = ctx.fill_parameters(self.content, self.id, field='content')
+        else:
+            self.prepared_content = self.content
+
+    def render_watermark(self, pdf_doc):
+        """Render the watermark text on the current page."""
+        if not self.prepared_content:
+            return
+            
+        # Save current graphics state
+        pdf_doc._out('q')
+        
+        # Set font
+        pdf_doc.set_font(self.style.font, '', self.style.font_size)
+        
+        # Apply opacity by blending color with white background
+        if self.opacity and self.opacity < 100:
+            alpha = self.opacity / 100.0
+            # Blend text color with white background to simulate transparency
+            blended_r = int(self.style.text_color.r * alpha + 255 * (1 - alpha))
+            blended_g = int(self.style.text_color.g * alpha + 255 * (1 - alpha))
+            blended_b = int(self.style.text_color.b * alpha + 255 * (1 - alpha))
+            pdf_doc.set_text_color(blended_r, blended_g, blended_b)
+        else:
+            pdf_doc.set_text_color(
+                self.style.text_color.r, 
+                self.style.text_color.g, 
+                self.style.text_color.b
+            )
+        
+        # Apply rotation if specified
+        if self.rotate_deg != 0:
+            # Convert to radians
+            angle = self.rotate_deg * 3.14159 / 180
+            
+            # Apply rotation transformation
+            cos_a = round(math.cos(angle), 5)
+            sin_a = round(math.sin(angle), 5)
+            
+            # Translate to rotation point (center of text)
+            center_x = self.x + self.width / 2
+            center_y = self.y + self.height / 2
+            
+            pdf_doc._out(f'1 0 0 1 {center_x} {center_y} cm')
+            pdf_doc._out(f'{cos_a} {sin_a} {-sin_a} {cos_a} 0 0 cm')
+            pdf_doc._out(f'1 0 0 1 {-center_x} {-center_y} cm')
+        
+        # Render the text
+        pdf_doc.text(self.x, self.y + self.style.font_size, self.prepared_content)
+        
+        # Restore graphics state
+        pdf_doc._out('Q')
+
+
+class WatermarkImageElement(DocElement):
+    """Watermark image element for rendering image watermarks on pages."""
+    
+    def __init__(self, report, data):
+        DocElement.__init__(self, report, data)
+        self.source = get_str_value(data, 'source')
+        self.image = get_str_value(data, 'image')
+        self.image_filename = get_str_value(data, 'imageFilename')
+        
+        # Style properties
+        if data.get('styleId'):
+            style = report.styles.get(get_int_value(data, 'styleId'))
+            if style is None:
+                raise ReportBroInternalError(f'Style for watermark image element {self.id} not found', log_error=False)
+            self.style = style
+        else:
+            self.style = ImageStyle(data, id_suffix='_watermark_image')
+        
+        # Watermark specific properties
+        self.opacity = data.get('opacity', 30)  # Default 30% opacity
+        if self.opacity:
+            self.opacity = int(self.opacity)
+        else:
+            self.opacity = 30
+        self.rotate_deg = data.get('rotateDeg', 0)  # Rotation in degrees
+        if self.rotate_deg:
+            self.rotate_deg = int(self.rotate_deg)
+        else:
+            self.rotate_deg = 0
+        self.show_in_foreground = bool(data.get('showInForeground', False))
+        self.print_if = get_str_value(data, 'printIf')
+        
+        self.image_key = None
+
+    def prepare(self, ctx, pdf_doc, only_verify):
+        """Prepare the watermark image by loading it."""
+        self.image_key = None
+        
+        # Set image_key which is used to fetch cached images
+        if self.source:
+            if Context.is_parameter_name(self.source):
+                # use current parameter value as image key
+                param_ref = ctx.get_parameter(Context.strip_parameter_name(self.source))
+                if param_ref:
+                    source_parameter = param_ref.parameter
+                    if source_parameter.type == ParameterType.string:
+                        self.image_key, _ = ctx.get_parameter_data(param_ref)
+                    elif source_parameter.type == ParameterType.image:
+                        self.image_key = self.source + '_' +\
+                                         str(Context.get_parameter_context_id(param_ref))
+            else:
+                # static url
+                self.image_key = self.source
+        elif self.image:
+            # static image
+            if self.image_filename:
+                self.image_key = self.image_filename
+            else:
+                self.image_key = 'watermark_image_' + str(self.id)
+
+        # Load image if available
+        if self.image_key:
+            self.report.load_image(self.image_key, ctx, self.id, self.source, self.image)
+
+    def render_watermark(self, pdf_doc):
+        """Render the watermark image on the current page."""
+        if not self.image_key:
+            return
+            
+        image_info = self.report.get_image(self.image_key)
+        if not image_info or not image_info.image_data:
+            return
+        
+        # Save current graphics state
+        pdf_doc._out('q')
+        
+        # Note: Image opacity is limited in FPDF2 without complex ExtGState support
+        # For now, we'll render the image normally and rely on the UI to communicate
+        # that image transparency may have limitations
+        
+        # Apply rotation if needed
+        if self.rotate_deg != 0:
+            # Apply rotation transformation
+            angle = self.rotate_deg * 3.14159 / 180
+            cos_a = round(math.cos(angle), 5)
+            sin_a = round(math.sin(angle), 5)
+            
+            # Translate to rotation point (center of image)
+            center_x = self.x + self.width / 2
+            center_y = self.y + self.height / 2
+            
+            pdf_doc._out(f'1 0 0 1 {center_x} {center_y} cm')
+            pdf_doc._out(f'{cos_a} {sin_a} {-sin_a} {cos_a} 0 0 cm')
+            pdf_doc._out(f'1 0 0 1 {-center_x} {-center_y} cm')
+        
+        # Render the image using FPDF's image method
+        try:
+            # Use the image filename or key to reference the cached image
+            if hasattr(image_info, 'image_type') and image_info.image_type:
+                # Create a temporary filename for FPDF
+                temp_filename = f"watermark_{self.id}.{image_info.image_type}"
+                
+                # Use FPDF's image method which handles the image data internally
+                # Reset image_data position if it's a BytesIO object
+                if hasattr(image_info.image_data, 'seek'):
+                    image_info.image_data.seek(0)
+                
+                # Add image to FPDF and render it
+                pdf_doc.image(image_info.image_data, self.x, self.y, self.width, self.height)
+            else:
+                # Fallback: try to render with the image key
+                pdf_doc.image(self.image_key, self.x, self.y, self.width, self.height)
+                
+        except Exception as e:
+            # If there's an issue with the image rendering, silently skip it
+            # Could add logging here if needed for debugging
+            pass
+        # Restore graphics state
+        pdf_doc._out('Q')

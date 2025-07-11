@@ -30,6 +30,8 @@ class DocElementType(Enum):
     section = 10
     section_band = 11
     checkbox = 12
+    watermark_text = 13
+    watermark_image = 14
 
 
 class ParameterType(Enum):
