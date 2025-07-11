@@ -31,10 +31,20 @@ FONT_TYPES = {
     "light": "light_filename",
     "lighter": "light_filename",
     "l": "light_filename",
+    "italic": "italic_filename",
+    "italics": "italic_filename",
+    "i": "italic_filename",
+    "bold-italic": "bold_italic_filename",
+    "italic-bold": "bold_italic_filename",
+    "bolditalic": "bold_italic_filename",
+    "italicbold": "bold_italic_filename",
+    "bi": "bold_italic_filename",
+    "ib": "bold_italic_filename",
     "normal": "filename",
     "regular": "filename",
     "r": "filename",
     "n": "filename",
+    "medium": "filename",
 }
 
 
@@ -93,8 +103,9 @@ class ReportFonts(object):
     value: str = ""
     filename: str = ""
     bold_filename: str = ""
+    italic_filename: str = ""
+    bold_italic_filename: str = ""
     light_filename: str = ""
-
     def to_jinja2(self):
         """to_jinja2."""
         if self.filename:
@@ -111,7 +122,7 @@ class ReportFontsLoader(object):
 
     LOAD_FMT_REGIX = re.compile(
         r"^(?:[0-9].*?-)*(.*?)(?:-[0-9]*?)*-"
-        r"(bold|bolder|lighter|light|normal|medium|regular|N|M|R|L|B)\.(otf|ttf)$",
+        r"(bold|bolder|lighter|light|normal|medium|regular|italic|italics|bolditalic|italicbold|N|M|R|L|B|I|BI|IB)\.(otf|ttf)$",
         re.MULTILINE | re.IGNORECASE,
     )
 
@@ -150,6 +161,15 @@ class ReportFontsLoader(object):
                     paths_map["filename"] = i[0]
 
             if len(paths_map) > 1:
+                # Ensure all required style variants are set for reportbro compatibility
+                # This prevents "fname parameter is required" errors when styles are missing
+                base_filename = paths_map.get("filename", "")
+                required_styles = ["bold_filename", "italic_filename", "bold_italic_filename", "light_filename"]
+                
+                for style in required_styles:
+                    if style not in paths_map:
+                        paths_map[style] = base_filename
+                
                 fonts.append(ReportFonts(**paths_map))
 
         self.fonts_cls = fonts
