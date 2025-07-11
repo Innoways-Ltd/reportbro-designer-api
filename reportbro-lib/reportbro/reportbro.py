@@ -908,10 +908,9 @@ class Report:
                                 'errorMsgInvalidMap',
                                 object_id=parameter.id, field=field, context=parameter.name))
                 else:
-                    # nested parameters (array / map inside other array / map parameter) are only
-                    # supported in PLUS version
-                    self.errors.append(Error(
-                        'errorMsgPlusVersionRequired', object_id=parameter.id, field='type', context=parameter.name))
+                    # nested parameters (array / map inside other array / map parameter) are now
+                    # supported in the free version - no longer restricted to PLUS version
+                    pass  # Allow nested parameters without error
 
     def evaluate_parameter(self, parameter, data):
         if parameter.is_evaluated():

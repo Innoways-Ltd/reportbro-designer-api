@@ -11,6 +11,8 @@ import PIL
 import PIL.Image
 import qrcode
 import qrcode.image.svg
+import re
+from html.parser import HTMLParser
 
 from .context import Context
 from .docelement import DocElementBase, DocElement
@@ -391,7 +393,7 @@ class TextElement(DocElement):
         self.text_height = 0
         self.line_index = -1
         self.lines_count = 0
-        self.text_lines = None
+        self.text_lines = []  # Initialize as empty list instead of None
         self.used_style = None
         self.prepared_link = None
         self.space_top = 0
@@ -442,8 +444,36 @@ class TextElement(DocElement):
                     raise ReportBroError(
                         Error('errorMsgInvalidLink', object_id=self.id, field='link'))
         else:
-            content = None
+            # Handle rich text content - return styled parts for processing
+            content = self.extract_text_from_rich_content(ctx)
+            if self.link:
+                self.prepared_link = ctx.fill_parameters(self.link, self.id, field='link')
+                if not (self.prepared_link.startswith('http://') or self.prepared_link.startswith('https://')):
+                    raise ReportBroError(
+                        Error('errorMsgInvalidLink', object_id=self.id, field='link'))
         return content
+
+    def extract_text_from_rich_content(self, ctx):
+        """Extract styled text parts from rich text HTML content."""
+        if not self.rich_text or not self.rich_text_html:
+            return []
+        
+        # Process the HTML content if eval is enabled
+        content = self.rich_text_html
+        if self.eval and content:
+            content = ctx.evaluate_expression(content, self.id, field='content')
+            content = to_string(content)
+        elif content:
+            content = ctx.fill_parameters(content, self.id, field='content')
+        
+        # Parse HTML to extract styled text parts
+        parser = RichTextHTMLParser()
+        try:
+            parser.feed(content)
+            return parser.get_styled_parts()
+        except Exception:
+            # If parsing fails, return content as plain text
+            return [{'text': content, 'bold': False, 'italic': False, 'underline': False}]
 
     def prepare_used_style(self, ctx):
         if self.cs_condition:
@@ -597,7 +627,17 @@ class TextElement(DocElement):
         return self.first_render_element
 
     def render_spreadsheet(self, row, col, ctx, renderer):
-        content = self.text_lines[0] if self.text_lines else ''
+        if self.rich_text and self.text_lines:
+            # For rich text, extract plain text for spreadsheet
+            content = ""
+            if isinstance(self.text_lines[0], RichTextLine):
+                for part in self.text_lines[0].styled_parts:
+                    content += part['text']
+            else:
+                content = self.text_lines[0] if self.text_lines else ''
+        else:
+            content = self.text_lines[0] if self.text_lines else ''
+            
         if self.spreadsheet_type == SpreadsheetType.date:
             try:
                 content = parse_datetime_string(content)
@@ -685,7 +725,11 @@ class TextElement(DocElement):
             raise ReportBroError(Error(msg_key=msg_key, object_id=self.id, field=error_field))
 
     def split_text_lines(self, content, available_width, ctx, pdf_doc):
-        if content is not None:
+        if self.rich_text:
+            # Handle rich text with styling
+            self.split_rich_text_lines(content, available_width, ctx, pdf_doc)
+        elif content is not None and content != "":
+            # Handle regular text
             self.set_font_by_style(self.used_style, pdf_doc)
             try:
                 lines = pdf_doc.split_text(first_w=available_width, w=available_width, txt=content)
@@ -699,7 +743,8 @@ class TextElement(DocElement):
                 text_line.add_text(text, text_width, self.used_style)
                 self.text_lines.append(text_line)
         else:
-            raise ReportBroError(Error('errorMsgPlusVersionRequired', object_id=self.id, field='richText'))
+            # Handle empty content
+            self.text_lines = []
 
         self.text_height = 0
         self.lines_count = len(self.text_lines)
@@ -708,6 +753,74 @@ class TextElement(DocElement):
             for text_line in self.text_lines:
                 text_line.setup()
                 self.text_height += text_line.height
+
+    def split_rich_text_lines(self, styled_parts, available_width, ctx, pdf_doc):
+        """Split rich text into lines while preserving styling."""
+        if not styled_parts:
+            self.text_lines = []
+            return
+        
+        # Split styled parts into separate lines based on newline characters
+        current_line_parts = []
+        
+        for part in styled_parts:
+            text = part['text']
+            if '\n' in text:
+                # Split text on newlines
+                text_segments = text.split('\n')
+                
+                # Add first segment to current line if not empty
+                if text_segments[0]:
+                    current_line_parts.append({
+                        'text': text_segments[0],
+                        'bold': part['bold'],
+                        'italic': part['italic'],
+                        'underline': part['underline']
+                    })
+                
+                # Create line with current parts
+                if current_line_parts:
+                    self._create_rich_text_line(current_line_parts, available_width)
+                    current_line_parts = []
+                
+                # Handle middle segments (each becomes its own line)
+                for segment in text_segments[1:-1]:
+                    if segment:  # Only create line if segment has content
+                        self._create_rich_text_line([{
+                            'text': segment,
+                            'bold': part['bold'],
+                            'italic': part['italic'],
+                            'underline': part['underline']
+                        }], available_width)
+                
+                # Add last segment to new current line if not empty
+                if text_segments[-1]:
+                    current_line_parts.append({
+                        'text': text_segments[-1],
+                        'bold': part['bold'],
+                        'italic': part['italic'],
+                        'underline': part['underline']
+                    })
+            else:
+                # No newlines, add to current line
+                if text.strip():  # Only add non-empty text
+                    current_line_parts.append(part)
+        
+        # Create final line if there are remaining parts
+        if current_line_parts:
+            self._create_rich_text_line(current_line_parts, available_width)
+    
+    def _create_rich_text_line(self, styled_parts, available_width):
+        """Helper method to create a RichTextLine from styled parts."""
+        rich_text_line = RichTextLine(
+            width=available_width, 
+            base_style=self.used_style, 
+            link=self.prepared_link, 
+            object_id=self.id
+        )
+        rich_text_line.add_styled_parts(styled_parts)
+        rich_text_line.setup()
+        self.text_lines.append(rich_text_line)
 
 
 class TextBlockElement(DocElementBase):
@@ -1929,235 +2042,180 @@ class SectionElement(DocElement):
         return row, col
 
 
-class TextCheckbox(TextLine):
+class RichTextHTMLParser(HTMLParser):
+    """
+    Simple HTML parser for rich text content.
+    Extracts text with style information from HTML.
+    """
+    def __init__(self):
+        super().__init__()
+        self.styled_parts = []
+        self.current_text = ""
+        self.current_styles = {
+            'bold': False,
+            'italic': False,
+            'underline': False
+        }
+        self.style_stack = []
 
-    def __init__(self, width, style, link=None, object_id=None):
-        super().__init__(width, style, link, object_id)
-        self.checkbox = False
+    def handle_starttag(self, tag, attrs):
+        # Save current text if any
+        if self.current_text:
+            self.styled_parts.append({
+                'text': self.current_text,
+                'bold': self.current_styles['bold'],
+                'italic': self.current_styles['italic'],
+                'underline': self.current_styles['underline']
+            })
+            self.current_text = ""
+        
+        # Push current styles to stack
+        self.style_stack.append(self.current_styles.copy())
+        
+        # Update styles based on tag
+        if tag.lower() in ['strong', 'b']:
+            self.current_styles['bold'] = True
+        elif tag.lower() in ['em', 'i']:
+            self.current_styles['italic'] = True
+        elif tag.lower() == 'u':
+            self.current_styles['underline'] = True
 
-    def add_checkbox(self, checkbox, text, text_width, style, link=None):
-        self.text = TextLinePart(text, text_width, style, link)
-        self.checkbox = checkbox
+    def handle_endtag(self, tag):
+        # Save current text if any
+        if self.current_text:
+            self.styled_parts.append({
+                'text': self.current_text,
+                'bold': self.current_styles['bold'],
+                'italic': self.current_styles['italic'],
+                'underline': self.current_styles['underline']
+            })
+            self.current_text = ""
+        
+        # Add line break after paragraph tags
+        if tag.lower() == 'p' and self.styled_parts:
+            # Add a line break as a separate styled part
+            self.styled_parts.append({
+                'text': '\n',
+                'bold': False,
+                'italic': False,
+                'underline': False
+            })
+        
+        # Restore previous styles from stack
+        if self.style_stack:
+            self.current_styles = self.style_stack.pop()
+
+    def handle_data(self, data):
+        self.current_text += data
+
+    def get_styled_parts(self):
+        # Add any remaining text
+        if self.current_text:
+            self.styled_parts.append({
+                'text': self.current_text,
+                'bold': self.current_styles['bold'],
+                'italic': self.current_styles['italic'],
+                'underline': self.current_styles['underline']
+            })
+        
+        return self.styled_parts
+
+
+class RichTextLine(object):
+    """
+    A text line that can contain multiple text parts with different styles.
+    Similar to TextLine but supports rich text rendering.
+    """
+    def __init__(self, width, base_style, link=None, object_id=None):
+        self.available_width = width
+        self.width = 0
+        self.height = 0
+        self.base_style = base_style
+        self.link = link
+        self.object_id = object_id
+        self.styled_parts = []  # List of styled text parts
+        self.last_line = False
+        self.baseline_offset_y = 0
+
+    def add_styled_parts(self, styled_parts):
+        """Add multiple styled text parts to this line."""
+        for part in styled_parts:
+            # Add all parts, including those with newlines (they'll be handled in split_rich_text_lines)
+            if part['text']:  # Only add parts with actual text content
+                self.styled_parts.append(part)
+
+    def setup(self):
+        """Calculate dimensions and setup the line for rendering."""
+        self.width = 0
+        max_font_size = self.base_style.font_size
+        
+        # Calculate total width - this is simplified, in practice you'd need 
+        # to measure each part with its specific font style
+        for part in self.styled_parts:
+            self.width += len(part['text']) * (max_font_size * 0.6)  # Rough estimate
+        
+        self.baseline_offset_y = max_font_size * 0.8
+        self.height = max_font_size if self.last_line else (max_font_size * self.base_style.line_spacing)
 
     def render_pdf(self, x, y, pdf_doc):
-        pdf_doc.set_font(family=self.style.font, style=self.style.font_style,
-                         size=self.style.font_size, underline=self.style.underline)
-
-        # only HorizontalAlignment.left
+        """Render the rich text line with proper styling."""
         offset_x = 0
+        
+        # Calculate horizontal alignment offset
+        if self.base_style.horizontal_alignment == HorizontalAlignment.center:
+            offset_x = (self.available_width - self.width) / 2
+        elif self.base_style.horizontal_alignment == HorizontalAlignment.right:
+            offset_x = self.available_width - self.width
+        
         render_x = x + offset_x
         render_y = y + self.baseline_offset_y
-        pdf_doc.print_text(render_x, render_y, self.text.text, object_id=self.object_id, field='content')
         
-        if self.checkbox:
-            checkbox = "☑"
-        else:
-            # checkbox = "☐"
-            checkbox = "⬜"
-        
-        # load emojs font
-        pdf_doc.set_font(family="NotoEmoji", size=self.style.font_size, underline=self.style.underline)
-        pdf_doc.print_text(render_x, render_y, checkbox, object_id=self.object_id, field='content')
-
-
-class CheckboxElement(TextElement):
-    def __init__(self, report, data):
-        super().__init__(report, data)
-        # checkbox not set
-        self.eval = False
-        self.rich_text = False
-        self.rich_text_html = ""
-        self.rich_text_content = ""
-        # self.checkbox_width = get_int_value(data, 'checkboxWidth') or 80
-        self.checkbox_if = get_str_value(data, 'checkboxIf')
-        self.data_source = get_str_value(data, 'dataSource')
-        self.join_padding_left = get_int_value(data, 'joinPaddingLeft') or 10
-        self.row_parameters = {}
-
-    def prepare(self, ctx, pdf_doc, only_verify):
-        self.prepare_used_style(ctx)
-
-        # if set data source will use  checkbox group
-        if self.data_source:
-            parameter_name = Context.strip_parameter_name(self.data_source)
-            param_ref = ctx.get_parameter(parameter_name)
-            if param_ref is None:
-                raise ReportBroError(
-                    Error('errorMsgMissingDataSourceParameter', object_id=self.id, field='dataSource'))
-
-            self.data_source_parameter = param_ref.parameter
-            if self.data_source_parameter.type != ParameterType.array:
-                raise ReportBroError(
-                    Error('errorMsgInvalidDataSourceParameter', object_id=self.id, field='dataSource'))
-
-            for row_parameter in self.data_source_parameter.children:
-                self.row_parameters[row_parameter.name] = row_parameter
-
-            self.rows, parameter_exists = ctx.get_parameter_data(param_ref)
-            if not parameter_exists:
-                raise ReportBroError(
-                    Error('errorMsgMissingData', object_id=self.id, field='dataSource'))
-
-            if not isinstance(self.rows, list):
-                raise ReportBroError(
-                    Error('errorMsgInvalidDataSource', object_id=self.id, field='dataSource'))
-
-            text_lines = self.prepare_process_checkboxs(ctx, pdf_doc)
-
-        else:
-            label_content = ctx.fill_parameters(self.content, self.id, field='content', pattern=self.pattern) or "label"
-            checkbox_content = ctx.evaluate_expression(self.checkbox_if, self.id, field='checkboxIf')
-            text_lines = [{"text":  label_content, "check": checkbox_content}]
-
-        # Check if the checkbox element width exceeds the container width
-        # self.split_checkbox_lines(content, checkbox, available_width=available_width, ctx=ctx, pdf_doc=pdf_doc)
-        self.text_lines = []
-        for i in text_lines:
-            content = " " * 6 + i["text"]
-            checkbox = True if i["check"] else False
-            checkbox_lines = self.process_split_checkbox_lines(ctx, pdf_doc, content, checkbox)
-            if len(checkbox_lines) != 1:
-                raise ReportBroError(
-                    Error('errorMsgCheckboxTooLongError', object_id=self.id, field='content', context=self.content))
-
-            self.text_lines += checkbox_lines
-
-        self.line_index = 0
-        self.text_height = 0
-        self.lines_count = len(self.text_lines)
-        if self.lines_count > 0:
-            self.text_lines[-1].last_line = True
-            for text_line in self.text_lines:
-                text_line.setup()
-                self.text_height += text_line.height
-
-    def prepare_process_checkboxs(self, ctx, pdf_doc):
-        row_count = len(self.rows)
-        row_index = 0
-
-        checkbox_lines = []
-        while row_index < row_count:
-            # push data context of current row so values of current row can be accessed
-            ctx.push_context(self.row_parameters, self.rows[row_index], data_source=self.data_source_parameter)
+        # Render each text part with its specific style
+        current_x = render_x
+        for part in self.styled_parts:
+            # Create font style for this part
+            font_style = self.base_style.font_style
+            if part['bold'] and part['italic']:
+                font_style = 'BI'
+            elif part['bold']:
+                font_style = 'B'
+            elif part['italic']:
+                font_style = 'I'
             
-            label_content = ctx.fill_parameters(self.content, self.id, field='content', pattern=self.pattern) or "label"
-            checkbox_content = ctx.evaluate_expression(self.checkbox_if, self.id, field='checkboxIf')
-            checkbox_lines.append({"text":  label_content, "check": checkbox_content})
-            ctx.pop_context()
-            row_index += 1        
-
-        return checkbox_lines
-
-    def process_split_checkbox_lines(self, ctx, pdf_doc, content, checkbox):
-        available_width = self.width - self.used_style.padding_left - self.used_style.padding_right
-        text_lines = self.split_checkbox_lines(content, checkbox, available_width=available_width, ctx=ctx, pdf_doc=pdf_doc)
-        self.set_height(self.height)
-        return text_lines
-
-    def split_checkbox_lines(self, content, checkbox, available_width, ctx, pdf_doc):
-        text_lines = []
-        if content is None:
-            raise ReportBroError(Error('errorMsgPlusVersionRequired', object_id=self.id, field='content'))
-
-        self.set_font_by_style(self.used_style, pdf_doc)
-        try:
-            lines = pdf_doc.split_text(first_w=available_width, w=available_width, txt=content)
-        except UnicodeEncodeError:
-            raise ReportBroError(
-                Error('errorMsgUnicodeEncodeError', object_id=self.id, field='content', context=self.content))
-
-        for line in lines:
-            text_line = TextCheckbox(
-                width=available_width, style=self.used_style, link=self.prepared_link, object_id=self.id
+            # Set font with appropriate style
+            pdf_doc.set_font(
+                family=self.base_style.font, 
+                style=font_style,
+                size=self.base_style.font_size, 
+                underline=part['underline'] or self.base_style.underline
             )
-            text, text_width, _ = line
-            text_line.add_checkbox(checkbox, text, text_width, self.used_style)
-            text_lines.append(text_line)
-        return text_lines
-
-    def get_next_render_element(self, offset_y, container_top, container_width, container_height, ctx, pdf_doc):
-        available_height = container_height - offset_y
-        if self.always_print_on_same_page and self.first_render_element and\
-                self.total_height > available_height and (offset_y != 0 or container_top != 0):
-            return None, False
-
-        lines = []
-        remaining_height = available_height
-        block_height = 0
-        text_height = 0
-        text_offset_y = 0
-        if self.space_top > 0:
-            space_top = min(self.space_top, remaining_height)
-            self.space_top -= space_top
-            block_height += space_top
-            remaining_height -= space_top
-            text_offset_y = space_top
-
-        if self.space_top == 0:
-            while self.line_index < self.lines_count:
-                last_line = (self.line_index >= self.lines_count - 1)
-                line_height = self.text_lines[self.line_index].height
-                tmp_height = line_height
-                if self.line_index == 0:
-                    tmp_height += self.used_style.padding_top
-
-                if last_line:
-                    tmp_height += self.used_style.padding_bottom
-
-                if tmp_height > remaining_height:
-                    break
-
-                lines.append(self.text_lines[self.line_index])
-                remaining_height -= tmp_height
-                block_height += tmp_height
-                text_height += line_height
-                self.line_index += 1
-
-        if self.line_index >= self.lines_count and self.space_bottom > 0:
-            space_bottom = min(self.space_bottom, remaining_height)
-            self.space_bottom -= space_bottom
-            block_height += space_bottom
-            remaining_height -= space_bottom
-
-        if self.space_top == 0 and self.line_index == 0 and self.lines_count > 0:
-            # even first line does not fit
-            if offset_y != 0 or container_top != 0:
-                # either container is not at top of page or element is not at top inside container
-                # -> try on next page
-                return None, False
-            else:
-                # already on top of container -> raise error
-                raise ReportBroError(
-                    Error('errorMsgInvalidSize', object_id=self.id, field='height'))
-
-        rendering_complete = self.line_index >= self.lines_count and self.space_top == 0 and self.space_bottom == 0
-        if not rendering_complete and remaining_height > 0:
-            # draw text block until end of container
-            block_height += remaining_height
-            remaining_height = 0
-
-        if self.first_render_element and rendering_complete:
-            render_element_type = RenderElementType.complete
-        else:
-            if self.first_render_element:
-                render_element_type = RenderElementType.first
-            elif rendering_complete:
-                render_element_type = RenderElementType.last
-                if self.used_style.vertical_alignment == VerticalAlignment.bottom:
-                    # make sure text is exactly aligned to bottom
-                    tmp_offset_y = block_height - self.used_style.padding_bottom - text_height
-                    if tmp_offset_y > 0:
-                        text_offset_y = tmp_offset_y
-            else:
-                render_element_type = RenderElementType.between
-
-        text_block_elem = TextBlockFlexRowElement(
-            self.report, x=self.x, y=self.y, render_y=offset_y,
-            width=self.width, height=block_height, text_offset_y=text_offset_y,
-            lines=lines, render_element_type=render_element_type, style=self.used_style,
-            join_padding_left=self.join_padding_left
-        )
-        self.first_render_element = False
-        self.render_bottom = text_block_elem.render_bottom
-        self.rendering_complete = rendering_complete
-        return text_block_elem, rendering_complete
+            pdf_doc.set_text_color(
+                self.base_style.text_color.r, 
+                self.base_style.text_color.g, 
+                self.base_style.text_color.b
+            )
+            
+            # Print the text part
+            pdf_doc.print_text(current_x, render_y, part['text'], 
+                             object_id=self.object_id, field='content')
+            
+            # Calculate width of this part for next position
+            part_width = pdf_doc.get_string_width(part['text'])
+            current_x += part_width
+            
+            # Handle strikethrough for this part
+            if self.base_style.strikethrough:
+                strikethrough_thickness = pdf_doc.current_font.ut
+                render_line_y = render_y - self.base_style.font_size * 0.3
+                strikethrough_width = strikethrough_thickness / 1000.0 * self.base_style.font_size
+                pdf_doc.set_line_width(strikethrough_width)
+                pdf_doc.set_draw_color(
+                    self.base_style.text_color.r, 
+                    self.base_style.text_color.g, 
+                    self.base_style.text_color.b
+                )
+                pdf_doc.line(current_x - part_width, render_line_y, current_x, render_line_y)
+        
+        # Add link if present
+        if self.link:
+            pdf_doc.link(render_x, y, self.width, self.base_style.font_size, self.link)
