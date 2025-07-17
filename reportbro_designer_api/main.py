@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import URL
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_404_NOT_FOUND
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
@@ -32,6 +33,30 @@ from .settings import settings
 from .utils.logger import LOGGER
 from .utils.model import ErrorResponse
 from .version import __VERSION__
+
+
+class TrustProxyHeadersMiddleware(BaseHTTPMiddleware):
+    """Middleware to handle proxy headers for HTTPS detection."""
+    
+    async def dispatch(self, request: Request, call_next):
+        """Handle the request and modify scheme if HTTPS proxy headers are present."""
+        # Check for HTTPS from proxy headers
+        if (request.headers.get("x-forwarded-proto") == "https" or
+            request.headers.get("x-forwarded-protocol") == "https" or
+            request.headers.get("x-forwarded-ssl") == "on"):
+            
+            # Modify the request scope to indicate HTTPS
+            request.scope["scheme"] = "https"
+            # Also update the server info to reflect HTTPS
+            if request.scope.get("server"):
+                host, port = request.scope["server"]
+                # Use standard HTTPS port if it was HTTP port
+                if port == 80:
+                    port = 443
+                request.scope["server"] = (host, port)
+        
+        response = await call_next(request)
+        return response
 
 
 class UiStaticFiles(StaticFiles):
@@ -154,6 +179,11 @@ def get_app() -> FastAPI:
             },
         ],
     )
+    
+    # Configure FastAPI to trust proxy headers for HTTPS detection
+    if settings.TRUST_PROXY_HEADERS:
+        rapp.add_middleware(TrustProxyHeadersMiddleware)
+    
     rapp.mount(
         "/ui/",
         UiStaticFiles(directory=os.path.join(settings.STATIC_PATH, "ui"), html=True),
@@ -161,6 +191,24 @@ def get_app() -> FastAPI:
     )
     rapp.mount("/static", StaticFiles(directory=settings.STATIC_PATH), name="static")
     rapp.include_router(router)
+
+    # Test endpoint for HTTPS proxy detection
+    @rapp.get("/test-https-detection")
+    async def test_https_detection(request: Request):
+        """Test endpoint to verify HTTPS proxy header detection."""
+        return {
+            "request_url": str(request.url),
+            "request_scheme": request.url.scheme,
+            "base_url": str(request.base_url),
+            "trust_proxy_headers": settings.TRUST_PROXY_HEADERS,
+            "static_url": str(request.url_for("static", path="css/base.css")),
+            "relevant_headers": {
+                "x-forwarded-proto": request.headers.get("x-forwarded-proto"),
+                "x-forwarded-protocol": request.headers.get("x-forwarded-protocol"),
+                "x-forwarded-ssl": request.headers.get("x-forwarded-ssl"),
+                "host": request.headers.get("host"),
+            }
+        }
 
     @rapp.exception_handler(ReportbroError)
     async def report_exception_handler(request: Request, exc: ReportbroError):
