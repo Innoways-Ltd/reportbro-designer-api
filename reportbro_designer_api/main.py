@@ -48,15 +48,43 @@ class UiStaticFiles(StaticFiles):
         #     response = await super().get_response(".", scope)
         # request.url_for(
         if isinstance(response, FileResponse) and isinstance(response.path, str):
+            # Check for HTTPS from proxy headers only if proxy headers are trusted
+            headers = dict(scope.get("headers", []))
+            scheme = "http"
+            
+            # Check common proxy headers for HTTPS only if trust is enabled
+            if settings.TRUST_PROXY_HEADERS and (
+                headers.get(b"x-forwarded-proto") == b"https" or
+                headers.get(b"x-forwarded-protocol") == b"https" or
+                headers.get(b"x-forwarded-ssl") == b"on"
+            ):
+                scheme = "https"
+            
             if len(self.FILE_JS_PATH_REGIX.findall(response.path)) > 0:
                 with open(response.path, "r", encoding="utf8") as fs:
                     content = fs.read()
 
+                root_path = scope.get("root_path", "")
+                app_root_path = scope.get("app_root_path", scope.get("root_path", ""))
+                
+                # Ensure the paths use the correct scheme
+                if scheme == "https":
+                    if root_path and not root_path.startswith("https://"):
+                        if root_path.startswith("http://"):
+                            root_path = root_path.replace("http://", "https://", 1)
+                        elif not root_path.startswith("/"):
+                            # If it's a relative path, we don't need to modify it
+                            pass
+                    
+                    if app_root_path and not app_root_path.startswith("https://"):
+                        if app_root_path.startswith("http://"):
+                            app_root_path = app_root_path.replace("http://", "https://", 1)
+
                 content = content.replace(
-                    'path:"/ui",', f'path:"{scope["root_path"]}",'
+                    'path:"/ui",', f'path:"{root_path}",'
                 )
                 content = self.FILE_JS_API_REGIX.sub(
-                    f'="{scope["app_root_path"]}",', content
+                    f'="{app_root_path}",', content
                 )
                 return PlainTextResponse(content=content, media_type="text/javascript")
 
@@ -64,7 +92,13 @@ class UiStaticFiles(StaticFiles):
                 with open(response.path, "r", encoding="utf8") as fs:
                     content = fs.read()
 
+                # Use the same scheme detection as above
                 url_ = URL(scope=scope)
+                # Manually construct the URL with the correct scheme
+                if scheme == "https" and url_.scheme == "http":
+                    url_str = str(url_).replace("http://", "https://", 1)
+                    url_ = URL(url_str)
+                
                 content = self.FILE_PATH_REGIX.sub(f'\\1="{url_}\\2"', content)
                 return HTMLResponse(content=content)
         return response
