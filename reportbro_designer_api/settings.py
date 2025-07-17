@@ -35,6 +35,9 @@ class Settings(BaseSettings):
 
     ROOT_PATH: str = ""
     ROOT_PATH_IN_SERVERS: bool = True
+    
+    # Proxy configuration for HTTPS handling
+    TRUST_PROXY_HEADERS: bool = bool(os.environ.get("TRUST_PROXY_HEADERS", "true") == "true")
 
     DOWNLOAD_TIMEOUT: int = 180
     PROCESS_POOL_SIZE: int = 0
