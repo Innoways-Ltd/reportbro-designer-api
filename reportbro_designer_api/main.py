@@ -21,6 +21,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.responses import JSONResponse
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import URL
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_404_NOT_FOUND
@@ -183,6 +184,15 @@ def get_app() -> FastAPI:
     # Configure FastAPI to trust proxy headers for HTTPS detection
     if settings.TRUST_PROXY_HEADERS:
         rapp.add_middleware(TrustProxyHeadersMiddleware)
+    
+    # Add CORS middleware to allow cross-origin requests
+    rapp.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ALLOW_ORIGINS,  # Use the configured origins
+        allow_credentials=True,
+        allow_methods=["*"],  # Allow all methods
+        allow_headers=["*"],  # Allow all headers
+    )
     
     rapp.mount(
         "/ui/",

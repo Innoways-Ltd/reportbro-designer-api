@@ -8,6 +8,7 @@
 """
 import os
 from functools import lru_cache
+from typing import List
 
 import pkg_resources
 from pydantic_settings import BaseSettings
@@ -38,6 +39,9 @@ class Settings(BaseSettings):
     
     # Proxy configuration for HTTPS handling
     TRUST_PROXY_HEADERS: bool = bool(os.environ.get("TRUST_PROXY_HEADERS", "true") == "true")
+    
+    # CORS configuration
+    CORS_ALLOW_ORIGINS: list = os.environ.get("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,https://dp.a4apple.cn").split(",")
 
     DOWNLOAD_TIMEOUT: int = 180
     PROCESS_POOL_SIZE: int = 0
