@@ -34,6 +34,7 @@ function saveReport() {
         success: function(data) {
             // report definition saved successfully,
             // set modified flag to false to disable save button
+            window.parent.postMessage({ type: "reportSavedSuccess", payload: data }, "*");
             rb.setModified(false);
         },
         error: function(jqXHR, textStatus, errorThrown) {
