@@ -54,6 +54,16 @@ class BackendBase(ABC):
     ) -> bool:
         """Is templates Exist."""
         raise NotImplementedError
+        
+    @abstractmethod
+    async def is_template_name_exist(
+        self,
+        template_name: str,
+        exclude_tid: Optional[str] = None,
+        project: Optional[str] = None,
+    ) -> bool:
+        """Check if template name already exists."""
+        raise NotImplementedError
 
     @abstractmethod
     async def get_templates_list(
@@ -97,6 +107,7 @@ class BackendBase(ABC):
         report: dict,
         tid: Optional[str] = None,
         project: Optional[str] = None,
+        skip_name_check: bool = False,
     ) -> sa.BaseTemplateId:
         """Put templates."""
         raise NotImplementedError

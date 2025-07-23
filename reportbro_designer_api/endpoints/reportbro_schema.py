@@ -46,6 +46,8 @@ class RequestUploadTemplate(BaseModel):
     """RequestUploadTemplate."""
 
     report: dict = Field(title="Template Data")
+    template_name: Optional[str] = Field(default=None, title="Template Name")
+    template_type: Optional[str] = Field(default=None, title="Template Type")
 
 
 class RequestGenerateTemplate(BaseModel):

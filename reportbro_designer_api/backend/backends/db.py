@@ -197,6 +197,30 @@ class DBBackendClient(object):
         results = await session.execute(query)
         tmpl = results.scalars().first()
         return True if tmpl else False
+        
+    @provide_db
+    async def _is_template_name_exist(
+        self,
+        template_name: str,
+        exclude_tid: Optional[str] = None,
+        project: Optional[str] = None,
+        session: Optional[AsyncSession] = None,
+    ) -> bool:
+        """Check if template name already exists."""
+        project = self.project_name if not project else project
+        query = select(mm.Templates.tid).where(
+            mm.Templates.template_name == template_name,
+            mm.Templates.project == project,
+        ).limit(1)
+        
+        # Exclude the template with this tid if specified
+        if exclude_tid:
+            query = query.where(mm.Templates.tid != exclude_tid)
+
+        assert session
+        results = await session.execute(query)
+        tmpl = results.scalars().first()
+        return True if tmpl else False
 
     @provide_db
     async def _get_template(
@@ -431,6 +455,17 @@ class DBBackend(DBBackendClient, BackendBase):
         project = self.project_name if not project else project
         r = await self._is_template_exist(tid, version_id, project)
         return r
+        
+    async def is_template_name_exist(
+        self,
+        template_name: str,
+        exclude_tid: Optional[str] = None,
+        project: Optional[str] = None,
+    ) -> bool:
+        """Check if template name already exists."""
+        project = self.project_name if not project else project
+        r = await self._is_template_name_exist(template_name, exclude_tid, project)
+        return r
 
     async def get_templates_list(
         self,
@@ -488,6 +523,7 @@ class DBBackend(DBBackendClient, BackendBase):
         report: dict,
         tid: Optional[str] = None,
         project: Optional[str] = None,
+        skip_name_check: bool = False,
     ) -> sa.BaseTemplateId:
         """Put templates."""
         if not report:
@@ -496,12 +532,23 @@ class DBBackend(DBBackendClient, BackendBase):
             else:
                 report = {}
 
+        # Check if template_name is unique (excluding the current tid if specified)
+        project = self.project_name if not project else project
+        if template_name and not skip_name_check:
+            name_exists = await self.is_template_name_exist(template_name, exclude_tid=tid, project=project)
+            if name_exists:
+                from fastapi import HTTPException
+                from starlette.status import HTTP_400_BAD_REQUEST
+                raise HTTPException(
+                    status_code=HTTP_400_BAD_REQUEST,
+                    detail=f"Template name '{template_name}' already exists. Template names must be unique."
+                )
+
         if tid is None:
             tid = await self.gen_uuid_object_key(project=project)
 
         # 创建template
         version_id = self.gen_uuid()
-        project = self.project_name if not project else project
         r = await self._put_template(
             tid, version_id, template_name, template_type, report, project
         )

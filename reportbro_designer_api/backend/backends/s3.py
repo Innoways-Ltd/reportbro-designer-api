@@ -287,6 +287,26 @@ class S3Backend(S3BackendClient, BackendBase):
         object_id = self.make_template_key(tid, project)
         r = await self._s3cli._is_object_exist(object_id, version_id)
         return r
+        
+    async def is_template_name_exist(
+        self,
+        template_name: str,
+        exclude_tid: Optional[str] = None,
+        project: Optional[str] = None,
+    ) -> bool:
+        """Check if template name already exists."""
+        # Get all templates with this project
+        templates = await self.get_templates_list(
+            project=project,
+            limit=100,  # Increase limit to catch more potential matches
+        )
+        
+        # Check if any template (excluding the one with tid=exclude_tid) has the same name
+        for template in templates:
+            if template.template_name == template_name and (exclude_tid is None or template.tid != exclude_tid):
+                return True
+                
+        return False
 
     async def get_templates_list(
         self,
@@ -332,8 +352,20 @@ class S3Backend(S3BackendClient, BackendBase):
         report: dict,
         tid: Optional[str] = None,
         project: Optional[str] = None,
+        skip_name_check: bool = False,
     ) -> sa.BaseTemplateId:
         """Put templates."""
+        # Check if template_name is unique (excluding the current tid if specified)
+        if template_name and template_name != "" and not skip_name_check:
+            name_exists = await self.is_template_name_exist(template_name, exclude_tid=tid, project=project)
+            if name_exists:
+                from fastapi import HTTPException
+                from starlette.status import HTTP_400_BAD_REQUEST
+                raise HTTPException(
+                    status_code=HTTP_400_BAD_REQUEST,
+                    detail=f"Template name '{template_name}' already exists. Template names must be unique."
+                )
+            
         if tid is None:
             tid = await self.gen_uuid_object_key(project)
 
