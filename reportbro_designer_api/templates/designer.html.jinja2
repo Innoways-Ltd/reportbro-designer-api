@@ -15,6 +15,8 @@
 var tid = "{{ tid|safe }}";
 var version_id = "{{ version_id|safe }}";
 var is_default = {{ is_default|default(false)|tojson }};
+var template_name = "";
+var template_type = "";
 
 function saveReport() {
     var report = rb.getReport();
@@ -28,7 +30,11 @@ function saveReport() {
     }
 
     $.ajax("{{ url_for('Save Templates', tid=tid) }}" + version_id, {
-        data: JSON.stringify({"report": report}),
+        data: JSON.stringify({
+            "report": report,
+            "template_name": template_name,
+            "template_type": template_type
+        }),
         type: "POST",
         contentType: "application/json",
         success: function(data) {
@@ -68,6 +74,13 @@ if (report) {
 }
 window.addEventListener("message", function (event) {
   if (event.data?.type === "saveReport") {
+    // If template_name and template_type are provided in the event data, update our variables
+    if (event.data?.template_name) {
+      template_name = event.data.template_name;
+    }
+    if (event.data?.template_type) {
+      template_type = event.data.template_type;
+    }
     saveReport();
   }
 });

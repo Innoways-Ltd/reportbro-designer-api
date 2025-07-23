@@ -187,21 +187,25 @@ async def create_templates(
     client: BackendBase = Depends(get_meth_cli),
 ):
     """Templates Manage page."""
-    rrr = await client.put_template(req.template_name, req.template_type, {})
-    return TemplateDataResponse(
-        code=HTTP_200_OK,
-        error="ok",
-        data=TemplateListData(
-            updated_at=datetime.now(),
-            template_name=req.template_name,
-            template_type=req.template_type,
-            tid=rrr.tid,
-            version_id=rrr.version_id,
-            template_designer_page=str(
-                request.url_for("Templates Designer page", tid=rrr.tid)
+    try:
+        rrr = await client.put_template(req.template_name, req.template_type, {})
+        return TemplateDataResponse(
+            code=HTTP_200_OK,
+            error="ok",
+            data=TemplateListData(
+                updated_at=datetime.now(),
+                template_name=req.template_name,
+                template_type=req.template_type,
+                tid=rrr.tid,
+                version_id=rrr.version_id,
+                template_designer_page=str(
+                    request.url_for("Templates Designer page", tid=rrr.tid)
+                ),
             ),
-        ),
-    )
+        )
+    except HTTPException as ex:
+        # Re-raise HTTPExceptions (including the duplicate template name error)
+        raise ex
 
 
 @router.put(
@@ -217,21 +221,25 @@ async def create_templates_tid(
     client: BackendBase = Depends(get_meth_cli),
 ):
     """Templates Manage page."""
-    rrr = await client.put_template(req.template_name, req.template_type, {}, tid=tid)
-    return TemplateDataResponse(
-        code=HTTP_200_OK,
-        error="ok",
-        data=TemplateListData(
-            updated_at=datetime.now(),
-            template_name=req.template_name,
-            template_type=req.template_type,
-            tid=rrr.tid,
-            version_id=rrr.version_id,
-            template_designer_page=str(
-                request.url_for("Templates Designer page", tid=rrr.tid)
+    try:
+        rrr = await client.put_template(req.template_name, req.template_type, {}, tid=tid)
+        return TemplateDataResponse(
+            code=HTTP_200_OK,
+            error="ok",
+            data=TemplateListData(
+                updated_at=datetime.now(),
+                template_name=req.template_name,
+                template_type=req.template_type,
+                tid=rrr.tid,
+                version_id=rrr.version_id,
+                template_designer_page=str(
+                    request.url_for("Templates Designer page", tid=rrr.tid)
+                ),
             ),
-        ),
-    )
+        )
+    except HTTPException as ex:
+        # Re-raise HTTPExceptions (including the duplicate template name error)
+        raise ex
 
 
 @router.post(
@@ -246,7 +254,7 @@ async def save_templates(
     tid: str = Path(title="Template id"),
     client: BackendBase = Depends(get_meth_cli),
 ):
-    """Save Templates."""
+    """Save Templates with optional metadata update."""
     if not req.report:
         raise HTTPException(
             status_code=HTTP_400_BAD_REQUEST,
@@ -257,26 +265,38 @@ async def save_templates(
     if not obj:
         raise TemplageNotFoundError("template not found")
 
-    rrr = await client.put_template(
-        tid=tid,
-        template_name=obj.template_name,
-        template_type=obj.template_type,
-        report=req.report,
-    )
-    return TemplateDataResponse(
-        code=HTTP_200_OK,
-        error="ok",
-        data=TemplateListData(
-            updated_at=datetime.now(),
-            template_name=obj.template_name,
-            template_type=obj.template_type,
+    # Use provided template_name and template_type if available, otherwise keep existing values
+    template_name = req.template_name if req.template_name else obj.template_name
+    template_type = req.template_type if req.template_type else obj.template_type
+    skip_name_check = False
+    if not req.template_name:
+        skip_name_check = True
+
+    try:
+        rrr = await client.put_template(
             tid=tid,
-            version_id=rrr.version_id,
-            template_designer_page=str(
-                request.url_for("Templates Designer page", tid=rrr.tid)
+            template_name=template_name,
+            template_type=template_type,
+            report=req.report,
+            skip_name_check=skip_name_check,  # Skip name check to allow updates
+        )
+        return TemplateDataResponse(
+            code=HTTP_200_OK,
+            error="ok",
+            data=TemplateListData(
+                updated_at=datetime.now(),
+                template_name=template_name,
+                template_type=template_type,
+                tid=tid,
+                version_id=rrr.version_id,
+                template_designer_page=str(
+                    request.url_for("Templates Designer page", tid=rrr.tid)
+                ),
             ),
-        ),
-    )
+        )
+    except HTTPException as ex:
+        # Re-raise HTTPExceptions (including the duplicate template name error)
+        raise ex
 
 
 @router.post(
@@ -309,26 +329,30 @@ async def clone_templates(
     if not obj_src:
         raise TemplageNotFoundError("template not found")
 
-    rrr = await client.put_template(
-        tid=tid,
-        template_name=obj_src.template_name,
-        template_type=obj_src.template_type,
-        report=obj.report,
-    )
-    return TemplateDataResponse(
-        code=HTTP_200_OK,
-        error="ok",
-        data=TemplateListData(
-            updated_at=datetime.now(),
+    try:
+        rrr = await client.put_template(
+            tid=tid,
             template_name=obj_src.template_name,
             template_type=obj_src.template_type,
-            tid=tid,
-            version_id=rrr.version_id,
-            template_designer_page=str(
-                request.url_for("Templates Designer page", tid=rrr.tid)
+            report=obj.report,
+        )
+        return TemplateDataResponse(
+            code=HTTP_200_OK,
+            error="ok",
+            data=TemplateListData(
+                updated_at=datetime.now(),
+                template_name=obj_src.template_name,
+                template_type=obj_src.template_type,
+                tid=tid,
+                version_id=rrr.version_id,
+                template_designer_page=str(
+                    request.url_for("Templates Designer page", tid=rrr.tid)
+                ),
             ),
-        ),
-    )
+        )
+    except HTTPException as ex:
+        # Re-raise HTTPExceptions (including the duplicate template name error)
+        raise ex
 
 
 @router.delete(
@@ -783,5 +807,95 @@ async def generate_templates(
     storage: StorageMange = Depends(get_storage_mange),
 ):
     """Review Templates."""
+    r = await read_file_in_s3(output_format, key, storage)
+    return r
+
+
+@router.put(
+    "/templates/name/{template_name}/generate",
+    tags=GEN_TAGS,
+    name="Generate file from template by name",
+    response_model=TemplateDownLoadResponse,
+)
+async def generate_templates_by_name_gen(
+    request: Request,
+    req: RequestGenerateTemplate,
+    background_tasks: BackgroundTasks,
+    template_name: str = Path(title="Template name"),
+    version_id: Optional[str] = Query(
+        None, title="Template version id", alias="versionId"
+    ),
+    disabled_fill: bool = Query(
+        default=False, title="Disable fill empty fields for input data"
+    ),
+    client: BackendBase = Depends(get_meth_cli),
+    storage: StorageMange = Depends(get_storage_mange),
+):
+    """Generate template file by template name."""
+    LOGGER.info(f"Looking for template with name: '{template_name}'")
+    
+    # Get all templates and find by name (case-insensitive)
+    templates_list = await client.get_templates_list(limit=settings.PAGE_LIMIT)
+    
+    # Log the found templates for debugging
+    LOGGER.info(f"Found {len(templates_list)} templates in total")
+    for t in templates_list:
+        LOGGER.info(f"Template: {t.template_name} (ID: {t.tid})")
+    
+    # Find template by name (case-insensitive)
+    matching_templates = [t for t in templates_list if t.template_name.lower() == template_name.lower()]
+    
+    if not matching_templates:
+        # Try to find template with partial match
+        matching_templates = [t for t in templates_list if template_name.lower() in t.template_name.lower()]
+    
+    if not matching_templates:
+        LOGGER.error(f"Template not found: {template_name}")
+        raise TemplageNotFoundError(f"template not found: {template_name}")
+    
+    # Get the template ID from the first matching template
+    template_info = matching_templates[0]
+    tid = template_info.tid
+    LOGGER.info(f"Using template: {template_info.template_name} (ID: {tid})")
+    
+    # Get the full template with report data
+    templage = await client.get_template(tid, version_id)
+    if not templage:
+        raise TemplageNotFoundError("template not found")
+
+    filename, report_file = gen_file_from_report(
+        req.output_format, templage.report, req.data, False, disabled_fill
+    )
+    assert report_file
+    download_key = await storage.put_file(filename, report_file, background_tasks)
+    return TemplateDownLoadResponse(
+        code=HTTP_200_OK,
+        error="ok",
+        data=TemplateDownLoadData(
+            download_key=download_key,
+            download_url=str(request.url_for("Get generate file by name", template_name=template_name))
+            + "?"
+            + urlencode(
+                {
+                    "key": download_key,
+                }
+            ),
+        ),
+    )
+
+
+@router.get(
+    "/templates/name/{template_name}/generate",
+    tags=GEN_TAGS,
+    name="Get generate file by name",
+)
+async def generate_templates_by_name(
+    output_format: str = Query(
+        "pdf", title="Output Format(pdf|xlsx)", pattern=r"^(pdf|xlsx)$"
+    ),
+    key: str = Query(title="File Key", min_length=16),
+    storage: StorageMange = Depends(get_storage_mange),
+):
+    """Get generated file by template name."""
     r = await read_file_in_s3(output_format, key, storage)
     return r

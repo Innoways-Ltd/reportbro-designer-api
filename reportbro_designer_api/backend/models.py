@@ -53,6 +53,6 @@ class Templates(Base):
     tid: Mapped[str] = mapped_column(String(50), default=str, nullable=False, primary_key=True)  # type: ignore
     project: Mapped[str] = mapped_column(String(30), default=str, nullable=False, primary_key=True)  # type: ignore
     version_id: Mapped[str] = mapped_column(String(50), default=str, nullable=False)  # type: ignore
-    template_name: Mapped[str] = mapped_column(String(30), default=str, nullable=False)  # type: ignore
+    template_name: Mapped[str] = mapped_column(String(30), default=str, nullable=False, unique=True)  # type: ignore
     template_type: Mapped[str] = mapped_column(String(30), default=str, nullable=False)  # type: ignore
     template_config: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)  # type: ignore
