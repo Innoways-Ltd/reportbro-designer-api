@@ -52,8 +52,6 @@ function saveReport() {
 const report = {{ report|safe }};
 const rb = new ReportBro(document.getElementById('reportbro'), {
     reportServerUrl: '{{ url_for('Generate preview file from template') }}',
-    menuShowButtonLabels: true,
-    menuShowDebug: {{ 'true' if menu_show_debug else 'false' }},
     menuSidebar: {{ 'true' if menu_sidebar else 'false' }},
     localeKey: "{{ locale }}",
     saveCallback: saveReport,
