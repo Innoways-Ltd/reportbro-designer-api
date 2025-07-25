@@ -178,7 +178,7 @@
     left: 0;
     top: 0;
     width: 230px;
-    background-image: url("rb_logo_white.png");
+    /* background-image: url("rb_logo_white.png"); */
     background-repeat: no-repeat;
     height: 45px;
     background-size: auto 85%;
@@ -187,16 +187,16 @@
     z-index: 10;
 }
 
-.rbroClassicTheme .rbroLogo {
+/* .rbroClassicTheme .rbroLogo {
     background-image: url("rb_logo_dark.png");
-}
+} */
 
 .rbroToolButtonContainer {
     left: 230px;
 }
 
 .rbroElementButtonContainer {
-    left: 620px;
+    left: 820px;
     width: calc(100% - 630px);
     display: flex;
     justify-content: space-between;
@@ -475,7 +475,7 @@ ul ul .rbroMenuItemText {
 }
 
 .rbroEmptyDetailPanel .rbroLogo {
-    background-image: url("rb_logo_dark.png");
+    /* background-image: url("rb_logo_dark.png"); */
     width: 390px;
     height: 70px;
     background-size: auto 80%;
