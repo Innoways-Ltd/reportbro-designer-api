@@ -53,6 +53,7 @@ from ..utils.report import ReportPdf
 from ..utils.report import fill_default
 from .reportbro_schema import PdfData
 from .reportbro_schema import RequestCloneTemplate
+from .reportbro_schema import RequestCopyTemplate
 from .reportbro_schema import RequestCreateTemplate
 from .reportbro_schema import RequestGenerateDataTemplate
 from .reportbro_schema import RequestGenerateReviewTemplate
@@ -109,6 +110,60 @@ async def main_index_page(
             for i in list_
         ],
     )
+
+
+@router.post(
+    "/templates/copy",
+    tags=TAGS,
+    name="Copy Templates",
+    response_model=TemplateDataResponse,
+)
+async def copy_templates(
+    request: Request,
+    req: RequestCopyTemplate,
+    client: BackendBase = Depends(get_meth_cli),
+):
+    """Copy Templates to a new template with a new name."""
+    # Get the source template
+    obj = await client.get_template(req.from_tid, req.from_version_id)
+    if not obj:
+        raise TemplageNotFoundError("source template not found")
+
+    if not req.from_version_id:
+        req.from_version_id = obj.version_id
+
+    # Use the provided new_template_name or default to the source template's name
+    new_template_name = req.new_template_name if req.new_template_name else obj.template_name
+    # Use the provided template_type or default to the source template's type
+    new_template_type = req.new_template_type if req.new_template_type else obj.template_type
+
+    # Add " - Copy" suffix to the template name
+    template_name_with_suffix = f"{new_template_name} - Copy"
+
+    try:
+        # Create a new template with the copied data
+        rrr = await client.put_template(
+            template_name=template_name_with_suffix,
+            template_type=new_template_type,
+            report=obj.report,  # Copy the report data
+        )
+        return TemplateDataResponse(
+            code=HTTP_200_OK,
+            error="ok",
+            data=TemplateListData(
+                updated_at=datetime.now(),
+                template_name=template_name_with_suffix,
+                template_type=new_template_type,
+                tid=rrr.tid,
+                version_id=rrr.version_id,
+                template_designer_page=str(
+                    request.url_for("Templates Designer page", tid=rrr.tid)
+                ),
+            ),
+        )
+    except HTTPException as ex:
+        # Re-raise HTTPExceptions (including the duplicate template name error)
+        raise ex
 
 
 @router.get(
@@ -352,8 +407,8 @@ async def clone_templates(
         )
     except HTTPException as ex:
         # Re-raise HTTPExceptions (including the duplicate template name error)
-        raise ex
-
+        raise ex 
+    
 
 @router.delete(
     "/templates/{tid}",

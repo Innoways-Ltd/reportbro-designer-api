@@ -124,6 +124,15 @@ class RequestCloneTemplate(BaseModel):
     from_version_id: Optional[str] = Field(None, title="Clone from Template version id")
 
 
+class RequestCopyTemplate(BaseModel):
+    """RequestCopyTemplate."""
+
+    from_tid: str = Field(title="Copy from template id")
+    from_version_id: Optional[str] = Field(None, title="Copy from Template version id")
+    new_template_name: Optional[str] = Field(None, title="New template name")
+    new_template_type: Optional[str] = Field(None, title="New template type")
+
+
 class TemplateListResponse(ListResponse[TemplateListData]):
     """TemplateListResponse."""
 
