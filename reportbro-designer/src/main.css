@@ -196,11 +196,12 @@
 }
 
 .rbroElementButtonContainer {
-    left: 820px;
+    left: 620px;
     width: calc(100% - 630px);
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
+    gap: 20px;
 }
 
 .rbroElementButtons {
