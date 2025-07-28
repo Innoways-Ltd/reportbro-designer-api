@@ -12,6 +12,7 @@ export default class ImageElement extends DocElement {
         super(rb.getLabel('docElementImage'), id, 80, 80, rb);
         this.source = '';
         this.image = '';
+        this.imageUrl = '';
         this.imageWidth = 0;
         this.imageHeight = 0;
         this.imageRatio = 0;
@@ -40,10 +41,10 @@ export default class ImageElement extends DocElement {
 
     setValue(field, value) {
         super.setValue(field, value);
-        if (field === 'source' || field === 'imageFilename') {
+        if (field === 'source' || field === 'imageFilename' || field === 'imageUrl') {
             this.updateName();
         }
-        if (field === 'source' || field === 'image') {
+        if (field === 'source' || field === 'image' || field === 'imageUrl') {
             this.setImage();
         }
     }
@@ -54,7 +55,7 @@ export default class ImageElement extends DocElement {
      */
     getProperties() {
         return [
-            'x', 'y', 'width', 'height', 'source', 'image', 'imageFilename',
+            'x', 'y', 'width', 'height', 'source', 'image', 'imageFilename', 'imageUrl',
             'styleId', 'horizontalAlignment', 'verticalAlignment', 'backgroundColor',
             'printIf', 'removeEmptyElement', 'link',
             'spreadsheet_hide', 'spreadsheet_column', 'spreadsheet_addEmptyRow'
@@ -137,8 +138,11 @@ export default class ImageElement extends DocElement {
 
     setImage() {
         this.elImg.setAttribute('src', '');
-        if (this.source.startsWith('https://') || this.source.startsWith('http://')) {
-            // image specified by url
+        if (this.imageUrl !== '' && (this.imageUrl.startsWith('https://') || this.imageUrl.startsWith('http://'))) {
+            // image specified by imageUrl field
+            this.elImg.setAttribute('src', this.imageUrl);
+        } else if (this.source.startsWith('https://') || this.source.startsWith('http://')) {
+            // image specified by url in source field  
             this.elImg.setAttribute('src', this.source);
         } else if (this.image !== '') {
             // image base64 encoded
@@ -155,6 +159,8 @@ export default class ImageElement extends DocElement {
     updateName() {
         if (this.getValue('imageFilename').trim() !== '') {
             this.name = this.getValue('imageFilename')
+        } else if (this.getValue('imageUrl').trim() !== '') {
+            this.name = this.getValue('imageUrl');
         } else if (this.getValue('source').trim() !== '') {
             this.name = this.getValue('source');
         } else {

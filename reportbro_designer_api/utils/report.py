@@ -96,6 +96,72 @@ def fill_default(report_definition, data):
         _fill_default(i, data)
 
 
+def process_image_urls(report_definition, data):
+    """
+    Process imageUrl fields and copy them to source field for ReportBro compatibility.
+    
+    The ReportBro frontend uses 'imageUrl' field but the backend library expects
+    the image URL to be in the 'source' field for external images.
+    
+    This function also resolves parameter references in imageUrl fields from the data.
+    """
+    doc_elements = report_definition.get("docElements", [])
+    
+    def _resolve_parameter_value(param_ref, data):
+        """Resolve parameter reference like ${param_name} or ${parent.child} from data."""
+        if not param_ref.startswith("${") or not param_ref.endswith("}"):
+            return param_ref
+        
+        # Extract parameter path from ${param_name} or ${parent.child}
+        param_path = param_ref[2:-1]  # Remove ${ and }
+        
+        # Split path by dots for nested parameters
+        path_parts = param_path.split(".")
+        
+        try:
+            current_value = data
+            for part in path_parts:
+                if isinstance(current_value, dict) and part in current_value:
+                    current_value = current_value[part]
+                else:
+                    return param_ref  # Return original if path not found
+            
+            return str(current_value) if current_value is not None else ""
+        except (KeyError, TypeError, AttributeError):
+            return param_ref  # Return original if resolution fails
+    
+    for element in doc_elements:
+        if element.get("elementType") == "image":
+            # Process imageUrl field
+            image_url = element.get("imageUrl", "").strip()
+            source = element.get("source", "").strip()
+            
+            if image_url:
+                # Resolve parameter references in imageUrl
+                resolved_url = _resolve_parameter_value(image_url, data)
+                element["source"] = resolved_url
+            elif not source:
+                # If no imageUrl and no source, check if source has parameter reference
+                if source:
+                    resolved_source = _resolve_parameter_value(source, data)
+                    element["source"] = resolved_source
+                
+        # Also handle watermark images if they exist
+        elif element.get("elementType") == "watermark_image":
+            image_url = element.get("imageUrl", "").strip()
+            source = element.get("source", "").strip()
+            
+            if image_url:
+                # Resolve parameter references in imageUrl
+                resolved_url = _resolve_parameter_value(image_url, data)
+                element["source"] = resolved_url
+            elif not source:
+                # If no imageUrl and no source, check if source has parameter reference
+                if source:
+                    resolved_source = _resolve_parameter_value(source, data)
+                    element["source"] = resolved_source
+
+
 @dataclass
 class ReportFonts(object):
     """ReportFonts."""
@@ -195,6 +261,7 @@ class ReportPdf(object):
             data,
             is_test_data,
             additional_fonts=font_loader.fonts,
+            allow_external_image=True,  # Enable external image loading
             **kwargs,
         )
 
