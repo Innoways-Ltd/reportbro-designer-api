@@ -46,6 +46,7 @@ const locale_en = {
     docElementImage: 'Image',
     docElementImageCountExceeded: 'Reached maximum number of ${count} allowed images',
     docElementImageFile: 'Image file',
+    docElementImageUrl: 'Image URL',
     docElementLabel: 'Label',
     docElementLine: 'Line',
     docElementLink: 'Link',

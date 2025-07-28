@@ -33,7 +33,7 @@ export default class WatermarkElement extends ImageElement {
      */
     getProperties() {
         return [
-            'x', 'y', 'width', 'height', 'source', 'image', 'imageFilename',
+            'x', 'y', 'width', 'height', 'source', 'image', 'imageFilename', 'imageUrl',
             'rotateDeg', 'opacity', 'showInForeground',
             'styleId', 'horizontalAlignment', 'verticalAlignment', 'backgroundColor',
             'printIf',

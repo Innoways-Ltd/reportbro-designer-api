@@ -51,6 +51,7 @@ from ..utils.logger import LOGGER
 from ..utils.model import ErrorResponse
 from ..utils.report import ReportPdf
 from ..utils.report import fill_default
+from ..utils.report import process_image_urls
 from .reportbro_schema import PdfData
 from .reportbro_schema import RequestCloneTemplate
 from .reportbro_schema import RequestCopyTemplate
@@ -450,6 +451,9 @@ def gen_file_from_report(
     try:
         if not disabled_fill:
             fill_default(report_definition, data)
+        
+        # Process imageUrl fields and copy them to source field for external image support
+        process_image_urls(report_definition, data)
 
         report = ReportPdf(report_definition, data, FONTS_LOADER, is_test_data)
     except ReportBroError as ex:

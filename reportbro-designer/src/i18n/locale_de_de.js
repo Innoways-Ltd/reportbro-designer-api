@@ -46,6 +46,7 @@ const locale_de = {
     docElementImage: 'Bild',
     docElementImageCountExceeded: 'Es sind nur bis zu ${count} Bilder erlaubt',
     docElementImageFile: 'Bilddatei',
+    docElementImageUrl: 'Bild-URL',
     docElementLabel: 'Bezeichnung',
     docElementLine: 'Linie',
     docElementLink: 'Link',

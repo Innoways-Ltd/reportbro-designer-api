@@ -45,6 +45,7 @@ const locale_zh = {
     docElementHeight: "高度",
     docElementImage: "图片",
     docElementImageFile: "图像文件",
+    docElementImageUrl: "图像URL",
     docElementLabel: "标签",
     docElementLine: "线",
     docElementLink: "链接",
