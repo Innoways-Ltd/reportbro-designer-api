@@ -74,13 +74,18 @@ if (report) {
 
 window.addEventListener("message", function (event) {
     if (event.data?.type === 'THEME_UPDATE') {
-        const { bgColor } = event.data.payload;
+        const { bgColor, externalData } = event.data.payload;
         // Update CSS custom properties to change the theme
         const root = document.documentElement;
         if (bgColor) {
             // Update the main panel background color and other related colors
             root.style.setProperty('--rbro-mainPanel-bg-color', bgColor);
             root.style.setProperty('--rbro-mainPanel-logo-bg-color', bgColor);
+        }
+        if (rb && externalData) {
+            if (typeof rb.setExternalData === 'function') {
+                rb.setExternalData(externalData);
+            }
         }
     }
     if (event.data?.type === "saveReport") {

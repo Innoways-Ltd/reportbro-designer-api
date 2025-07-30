@@ -48,17 +48,17 @@ export default class ReportBro {
             autoSaveOnPreview: false,
             cmdExecutedCallback: null,
             colors: [
-                "#000000","#444444","#666666","#999999","#cccccc","#eeeeee","#f3f3f3","#ffffff",
-                "#ff0000","#ff9900","#ffff00","#00ff00","#00ffff","#0000ff","#9900ff","#ff00ff",
-                "#ea9999","#f9cb9c","#ffe599","#b6d7a8","#a2c4c9","#9fc5e8","#b4a7d6","#d5a6bd",
-                "#e06666","#f6b26b","#ffd966","#93c47d","#76a5af","#6fa8dc","#8e7cc3","#c27ba0",
-                "#cc0000","#e69138","#f1c232","#6aa84f","#45818e","#3d85c6","#674ea7","#a64d79",
-                "#990000","#b45f06","#bf9000","#38761d","#134f5c","#0b5394","#351c75","#741b47",
-                "#660000","#783f04","#7f6000","#274e13","#0c343d","#073763","#20124d","#4c1130"
+                "#000000", "#444444", "#666666", "#999999", "#cccccc", "#eeeeee", "#f3f3f3", "#ffffff",
+                "#ff0000", "#ff9900", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#9900ff", "#ff00ff",
+                "#ea9999", "#f9cb9c", "#ffe599", "#b6d7a8", "#a2c4c9", "#9fc5e8", "#b4a7d6", "#d5a6bd",
+                "#e06666", "#f6b26b", "#ffd966", "#93c47d", "#76a5af", "#6fa8dc", "#8e7cc3", "#c27ba0",
+                "#cc0000", "#e69138", "#f1c232", "#6aa84f", "#45818e", "#3d85c6", "#674ea7", "#a64d79",
+                "#990000", "#b45f06", "#bf9000", "#38761d", "#134f5c", "#0b5394", "#351c75", "#741b47",
+                "#660000", "#783f04", "#7f6000", "#274e13", "#0c343d", "#073763", "#20124d", "#4c1130"
             ],
             defaultFont: Style.font.helvetica,
             enableSpreadsheet: true,
-            fontSizes: [4,5,6,7,8,9,10,11,12,13,14,15,16,18,20,22,24,26,28,32,36,40,44,48,54,60,66,72,80],
+            fontSizes: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 26, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80],
             fonts: [
                 { name: 'Courier', value: Style.font.courier },
                 { name: 'Helvetica', value: Style.font.helvetica },
@@ -194,7 +194,7 @@ export default class ReportBro {
                     case 67: {
                         // Ctrl + C: copy
                         if (!(event.target instanceof HTMLInputElement ||
-                                event.target instanceof HTMLTextAreaElement)) {
+                            event.target instanceof HTMLTextAreaElement)) {
                             let cleared = false;
                             let idMap = {};
                             let serializedObj;
@@ -202,8 +202,8 @@ export default class ReportBro {
                             for (let selectionId of this.selections) {
                                 let obj = this.getDataObject(selectionId);
                                 if ((obj instanceof DocElement && !(obj instanceof TableTextElement)) ||
-                                        (obj instanceof Parameter && !obj.showOnlyNameType) ||
-                                        (obj instanceof Style)) {
+                                    (obj instanceof Parameter && !obj.showOnlyNameType) ||
+                                    (obj instanceof Style)) {
                                     if (!cleared) {
                                         this.clipboardElements = [];
                                         cleared = true;
@@ -251,7 +251,7 @@ export default class ReportBro {
                     case 86: {
                         // Ctrl + V: paste
                         if (!(event.target instanceof HTMLInputElement ||
-                                event.target instanceof HTMLTextAreaElement)) {
+                            event.target instanceof HTMLTextAreaElement)) {
                             let cmd;
                             let cmdGroup = new CommandGroupCmd('Paste from clipboard', this);
                             let mappedContainerIds = {};
@@ -290,8 +290,8 @@ export default class ReportBro {
                                             let containerSize = container.getContentSize();
                                             let contentScrollY = this.getDocument().getContentScrollPosY();
                                             if (contentScrollY > containerOffset.y &&
-                                                    (contentScrollY + pastedElement.height) <
-                                                    (containerOffset.y + containerSize.height)) {
+                                                (contentScrollY + pastedElement.height) <
+                                                (containerOffset.y + containerSize.height)) {
                                                 pasteToY = contentScrollY - containerOffset.y;
                                             }
                                         }
@@ -304,7 +304,7 @@ export default class ReportBro {
                                     cmdGroup.addCommand(cmd);
 
                                 } else if (pastedElement.baseClass === 'Parameter' ||
-                                        pastedElement.baseClass === 'Style') {
+                                    pastedElement.baseClass === 'Style') {
                                     // try to find unique name for pasted element by using a suffix
                                     let copySuffix = this.getLabel('nameCopySuffix');
                                     let pastedElementName = pastedElement.name + ` (${copySuffix})`;
@@ -485,7 +485,8 @@ export default class ReportBro {
     addMainPanelItemSubCategories() {
         const watermarkTextsItem = new MainPanelItem(
             'watermarkText', this.mainPanel.getWatermarksItem(), this.watermarkTextContainer, {
-                hasChildren: true, showAdd: true, showDelete: false, hasDetails: false, draggable: false }, this,
+            hasChildren: true, showAdd: true, showDelete: false, hasDetails: false, draggable: false
+        }, this,
         );
         this.watermarkTextContainer.setPanelItem(watermarkTextsItem);
         this.mainPanel.getWatermarksItem().appendChild(watermarkTextsItem);
@@ -493,7 +494,8 @@ export default class ReportBro {
 
         const watermarkImagesItem = new MainPanelItem(
             'watermarkImage', this.mainPanel.getWatermarksItem(), this.watermarkImageContainer, {
-                hasChildren: true, showAdd: true, showDelete: false, hasDetails: false, draggable: false }, this,
+            hasChildren: true, showAdd: true, showDelete: false, hasDetails: false, draggable: false
+        }, this,
         );
         this.watermarkImageContainer.setPanelItem(watermarkImagesItem);
         this.mainPanel.getWatermarksItem().appendChild(watermarkImagesItem);
@@ -507,12 +509,13 @@ export default class ReportBro {
         for (let parameterData of [
             { name: 'page_count', type: Parameter.type.number, eval: false, editable: false, showOnlyNameType: true },
             { name: 'page_number', type: Parameter.type.number, eval: false, editable: false, showOnlyNameType: true }
-            ]) {
+        ]) {
             let parameter = new Parameter(this.getUniqueId(), parameterData, this);
             let parentPanel = this.mainPanel.getParametersItem();
             let panelItem = new MainPanelItem(
                 'parameter', parentPanel, parameter, {
-                    hasChildren: false, showAdd: false, showDelete: false, draggable: false }, this
+                hasChildren: false, showAdd: false, showDelete: false, draggable: false
+            }, this
             );
             parameter.setPanelItem(panelItem);
             parentPanel.appendChild(panelItem);
@@ -567,10 +570,10 @@ export default class ReportBro {
             event.preventDefault();
         });
         this.element.addEventListener('mousemove', (event) => {
-           if (!this.mainPanel.processMouseMove(event)) {
-               this.document.processMouseMove(event);
-           }
-       });
+            if (!this.mainPanel.processMouseMove(event)) {
+                this.document.processMouseMove(event);
+            }
+        });
     }
 
     /**
@@ -688,7 +691,7 @@ export default class ReportBro {
             for (const dataSource of dataSources) {
                 if (dataSource.parameters.length > 0) {
                     let groupName;
-                    if (firstDataSource)  {
+                    if (firstDataSource) {
                         groupName = this.getLabel('parametersDataSource');
                     } else {
                         // include data source name in group label to better distinguish groups
@@ -887,7 +890,7 @@ export default class ReportBro {
     }
 
     deleteDocElements() {
-        for (let i=0; i < this.docElements.length; i++) {
+        for (let i = 0; i < this.docElements.length; i++) {
             this.deleteDataObject(this.docElements[i]);
         }
         this.docElements = [];
@@ -1037,7 +1040,7 @@ export default class ReportBro {
 
     debugCommandStack() {
         console.clear();
-        for (let i=0; i < this.commandStack.length; i++) {
+        for (let i = 0; i < this.commandStack.length; i++) {
             if (i > this.lastCommandIndex) {
                 console.log('( ' + i + ' ' + this.commandStack[i].getName() + ' )');
             } else {
@@ -1206,7 +1209,7 @@ export default class ReportBro {
         for (let i = 0; i < this.containers.length; i++) {
             const container = this.containers[i];
             if (container.getLevel() > bestMatchLevel && container.isElementAllowed(elementType) &&
-                    container.isInside(posX, posY)) {
+                container.isInside(posX, posY)) {
                 let isIgnoredContainer = false;
                 for (const ignoreContainer of ignoreContainers) {
                     if (container === ignoreContainer || container.isChildOf(ignoreContainer)) {
@@ -1310,7 +1313,7 @@ export default class ReportBro {
             }
         }
         let center = minX + ((maxX - minX) / 2);
-        let vcenter  = minY + ((maxY - minY) / 2);
+        let vcenter = minY + ((maxY - minY) / 2);
         if (elementCount > 1) {
             let cmdGroup = new CommandGroupCmd('Align elements', this);
             for (let selectionId of this.selections) {
@@ -1322,41 +1325,41 @@ export default class ReportBro {
                                 obj.getId(), 'x', '' + minX, SetValueCmd.type.text, this);
                             cmdGroup.addCommand(cmd);
                         }
-                        break;
+                            break;
                         case Style.alignment.center: {
                             let cmd = new SetValueCmd(
                                 obj.getId(), 'x', '' + (center - (obj.getValue('widthVal') / 2)),
                                 SetValueCmd.type.text, this);
                             cmdGroup.addCommand(cmd);
                         }
-                        break;
+                            break;
                         case Style.alignment.right: {
                             let cmd = new SetValueCmd(
                                 obj.getId(), 'x', '' + (maxX - obj.getValue('widthVal')),
                                 SetValueCmd.type.text, this);
                             cmdGroup.addCommand(cmd);
                         }
-                        break;
+                            break;
                         case Style.alignment.top: {
                             let cmd = new SetValueCmd(
                                 obj.getId(), 'y', '' + minY, SetValueCmd.type.text, this);
                             cmdGroup.addCommand(cmd);
                         }
-                        break;
+                            break;
                         case Style.alignment.middle: {
                             let cmd = new SetValueCmd(
                                 obj.getId(), 'y', '' + (vcenter - (obj.getValue('heightVal') / 2)),
                                 SetValueCmd.type.text, this);
                             cmdGroup.addCommand(cmd);
                         }
-                        break;
+                            break;
                         case Style.alignment.bottom: {
                             let cmd = new SetValueCmd(
                                 obj.getId(), 'y', '' + (maxY - obj.getValue('heightVal')),
                                 SetValueCmd.type.text, this);
                             cmdGroup.addCommand(cmd);
                         }
-                        break;
+                            break;
                     }
                 }
             }
@@ -1374,7 +1377,7 @@ export default class ReportBro {
         if (val === '') {
             return '0px';
         }
-        if (typeof(val) === 'string') {
+        if (typeof (val) === 'string') {
             val = parseFloat(val.replace(',', '.'));
             if (isNaN(val)) {
                 return '0px';
@@ -1409,10 +1412,10 @@ export default class ReportBro {
             if (!parameter.getValue('showOnlyNameType')) {
                 let type = parameter.getValue('type');
                 if (type === Parameter.type.array || type === Parameter.type.simpleArray ||
-                        type === Parameter.type.map) {
+                    type === Parameter.type.map) {
                     rv[parameter.getName()] = parameter.getTestData(false);
                 } else if (type === Parameter.type.string || type === Parameter.type.number ||
-                        type === Parameter.type.date) {
+                    type === Parameter.type.date) {
                     rv[parameter.getName()] = parameter.getValue('testData');
                 } else if (type === Parameter.type.boolean) {
                     rv[parameter.getName()] = parameter.getValue('testDataBoolean');
@@ -1462,38 +1465,38 @@ export default class ReportBro {
             }),
         }).then((response) => {
             if (!response.ok) {
-              throw Error(response.statusText);
+                throw Error(response.statusText);
             }
             if (self.properties.autoSaveOnPreview) {
                 self.save();
             }
             return response;
         }).then((response) => response.text())
-        .then((data) => {
-            clearTimeout(timeoutId);
-            self.hideLoading();
-            if (data.substring(0, 4) === 'key:') {
-                self.reportKey = data.substring(4);
-                const url = new URL(requestParams.reportServerUrl, document.location);
-                url.searchParams.set('key', self.reportKey);
-                url.searchParams.set('outputFormat', 'pdf');
-                self.getDocument().openPdfPreviewTab(url.toString(), headers);
-            } else {
-                self.reportKey = null;
-                try {
-                    let obj = JSON.parse(data);
-                    if (obj.errors.length > 0) {
-                        self.processErrors(obj.errors, false);
+            .then((data) => {
+                clearTimeout(timeoutId);
+                self.hideLoading();
+                if (data.substring(0, 4) === 'key:') {
+                    self.reportKey = data.substring(4);
+                    const url = new URL(requestParams.reportServerUrl, document.location);
+                    url.searchParams.set('key', self.reportKey);
+                    url.searchParams.set('outputFormat', 'pdf');
+                    self.getDocument().openPdfPreviewTab(url.toString(), headers);
+                } else {
+                    self.reportKey = null;
+                    try {
+                        let obj = JSON.parse(data);
+                        if (obj.errors.length > 0) {
+                            self.processErrors(obj.errors, false);
+                        }
+                    } catch (e) {
+                        alert('preview failed');
                     }
-                } catch (e) {
-                    alert('preview failed');
                 }
-            }
-        }).catch((error) => {
-            clearTimeout(timeoutId);
-            self.hideLoading();
-            alert('preview failed');
-        });
+            }).catch((error) => {
+                clearTimeout(timeoutId);
+                self.hideLoading();
+                alert('preview failed');
+            });
     }
 
     getRequestParameters() {
@@ -1511,7 +1514,288 @@ export default class ReportBro {
         return params;
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    setExternalData(data) {
+        if (!data || typeof data !== 'object') {
+            console.log('No valid data provided, exiting');
+            return;
+        }
+
+        // Helper function to clean parameter name (remove ${} wrapper if present)
+        const cleanParameterName = (paramName) => {
+            if (paramName.startsWith('${') && paramName.endsWith('}')) {
+                return paramName.slice(2, -1);
+            }
+            return paramName;
+        };
+
+        // Helper function to set test data based on parameter type
+        const setParameterTestData = (parameter, value) => {
+            const paramType = parameter.getValue('type');
+            let field, processedValue, cmdType;
+
+            if (paramType === Parameter.type.map ||
+                paramType === Parameter.type.array ||
+                paramType === Parameter.type.simpleArray) {
+                // For complex types, store as JSON string in testData
+                field = 'testData';
+                processedValue = JSON.stringify(value);
+                cmdType = SetValueCmd.type.text;
+            } else if (paramType === Parameter.type.boolean) {
+                // For boolean parameters, use testDataBoolean
+                field = 'testDataBoolean';
+                processedValue = Boolean(value);
+                cmdType = SetValueCmd.type.checkbox;
+            } else if (paramType === Parameter.type.image) {
+                // For image parameters, handle special format
+                if (typeof value === 'object' && value.data && value.filename) {
+                    // Use command to set both fields
+                    const cmd1 = new SetValueCmd(parameter.id, 'testDataImage', value.data, SetValueCmd.type.file, this);
+                    const cmd2 = new SetValueCmd(parameter.id, 'testDataImageFilename', value.filename, SetValueCmd.type.filename, this);
+                    this.executeCommand(new CommandGroupCmd([cmd1, cmd2], this));
+                    return;
+                } else {
+                    field = 'testDataImage';
+                    processedValue = value;
+                    cmdType = SetValueCmd.type.file;
+                }
+            } else if (paramType === Parameter.type.richText) {
+                // For rich text parameters, use testDataRichText
+                field = 'testDataRichText';
+                processedValue = String(value);
+                cmdType = SetValueCmd.type.text;
+            } else {
+                // For string, number, date and other simple types, use testData
+                field = 'testData';
+                processedValue = String(value);
+                cmdType = SetValueCmd.type.text;
+            }
+
+            // Use SetValueCmd exactly like ParameterPanel does
+            try {
+                const cmd = new SetValueCmd(parameter.id, field, processedValue, cmdType, this);
+                this.executeCommand(cmd);
+            } catch (error) {
+                // Fallback to direct setValue with manual UI refresh
+                parameter.setValue(field, processedValue);
+
+                // Force UI refresh for this parameter
+                if (this.detailPanels && this.detailPanels[this.activeDetailPanel]) {
+                    // If this parameter is currently selected, update its display
+                    if (this.isSelectedObject(parameter.id)) {
+                        this.detailPanels[this.activeDetailPanel].updateDisplay(field);
+                    }
+                }
+
+                // Also manually trigger any notification listeners
+                if (this.detailPanels && this.detailPanels[this.activeDetailPanel]) {
+                    this.detailPanels[this.activeDetailPanel].notifyEvent(parameter, Command.operation.change, field);
+                }
+            }
+        };        // Group data by parent parameter for batch processing
+        const parentDataMap = new Map();
+
+        // Process each data key-value pair
+        for (const [key, value] of Object.entries(data)) {
+            const cleanKey = cleanParameterName(key);
+
+            if (cleanKey.includes('.')) {
+                // Handle dotted notation like "CompanyDetails.Name"
+                const parts = cleanKey.split('.');
+                const parentName = parts[0];
+                const fieldName = parts.slice(1).join('.');
+
+                // Check if parent parameter exists
+                let parentParameter = this.getParameterByName(parentName);
+                if (parentParameter) {
+                    // Parent exists, update its test data to include this field
+                    const currentTestData = parentParameter.getValue('testData');
+                    let testDataObj = {};
+
+                    try {
+                        testDataObj = currentTestData ? JSON.parse(currentTestData) : {};
+                    } catch (e) {
+                        console.warn(`Invalid JSON in testData for ${parentName}, using empty object`);
+                        testDataObj = {};
+                    }
+
+                    // Set the field value
+                    testDataObj[fieldName] = value;
+
+                    // Update the parent parameter's test data
+                    const newTestData = JSON.stringify(testDataObj);
+                    setParameterTestData(parentParameter, testDataObj);
+                } else {
+                    // Parent doesn't exist, group for creation
+                    if (!parentDataMap.has(parentName)) {
+                        parentDataMap.set(parentName, new Map());
+                    }
+                    parentDataMap.get(parentName).set(fieldName, value);
+                }
+            } else {
+                // Simple parameter name (no dots)
+                let parameter = this.getParameterByName(cleanKey);
+
+                if (parameter) {
+                    // Parameter found, set its test data
+                    setParameterTestData(parameter, value);
+                } else {
+                    // Simple parameter - create immediately
+                    this.createSimpleParameter(cleanKey, value);
+                }
+            }
+        }
+
+        // Process grouped parent parameters
+        for (const [parentName, childrenData] of parentDataMap) {
+            this.createOrUpdateParentParameter(parentName, childrenData);
+        }
+
+        // Simple approach: if any parameter is currently selected, trigger a reselection to refresh the UI
+        if (this.selections.length > 0) {
+            const selectedId = this.selections[0];
+            const selectedObj = this.getDataObject(selectedId);
+            if (selectedObj instanceof Parameter) {
+                // Force refresh by deselecting and reselecting
+                this.deselectAll(false);
+                setTimeout(() => {
+                    this.selectObject(selectedId, true);
+                }, 10);
+            }
+        }
+
+        // Try to refresh any parameter-related UI elements
+        if (this.mainPanel) {
+            // Force refresh of the parameter section by triggering a DOM update
+            const parametersContainer = document.querySelector('.rbroMainPanelParameterContainer');
+            if (parametersContainer) {
+                // Trigger a DOM refresh by temporarily modifying a style
+                parametersContainer.style.opacity = '0.99';
+                setTimeout(() => {
+                    parametersContainer.style.opacity = '';
+                }, 10);
+            }
+        }
+    }
+
+    /**
+     * Creates a simple parameter
+     */
+    createSimpleParameter(name, value) {
+        let paramType;
+        let testDataField;
+        let testDataValue;
+
+        if (typeof value === 'boolean') {
+            paramType = Parameter.type.boolean;
+            testDataField = 'testDataBoolean';
+            testDataValue = value;
+        } else if (Array.isArray(value)) {
+            paramType = Parameter.type.array;
+            testDataField = 'testData';
+            testDataValue = JSON.stringify(value);
+        } else if (typeof value === 'object' && value !== null) {
+            paramType = Parameter.type.map;
+            testDataField = 'testData';
+            testDataValue = JSON.stringify(value);
+        } else {
+            paramType = Parameter.type.string;
+            testDataField = 'testData';
+            testDataValue = String(value);
+        }
+
+        const parameterData = {
+            id: this.getUniqueId(),
+            name: name,
+            type: paramType,
+            [testDataField]: testDataValue
+        };
+
+        const parameter = this.createParameter(parameterData, null);
+        return parameter;
+    }
+
+    /**
+     * Creates or updates a parent map parameter with children
+     */
+    createOrUpdateParentParameter(parentName, childrenData) {
+        let parentParameter = this.getParameterByName(parentName);
+
+        if (!parentParameter) {
+            // Create parent map parameter
+            const parentData = {
+                id: this.getUniqueId(),
+                name: parentName,
+                type: Parameter.type.map,
+                testData: '{}',
+                children: []
+            };
+
+            // Add children data
+            for (const [fieldName, value] of childrenData) {
+                let childType;
+                let childTestDataField;
+                let childTestDataValue;
+
+                if (typeof value === 'boolean') {
+                    childType = Parameter.type.boolean;
+                    childTestDataField = 'testDataBoolean';
+                    childTestDataValue = value;
+                } else if (Array.isArray(value)) {
+                    childType = Parameter.type.array;
+                    childTestDataField = 'testData';
+                    childTestDataValue = JSON.stringify(value);
+                } else if (typeof value === 'object' && value !== null) {
+                    childType = Parameter.type.map;
+                    childTestDataField = 'testData';
+                    childTestDataValue = JSON.stringify(value);
+                } else {
+                    childType = Parameter.type.string;
+                    childTestDataField = 'testData';
+                    childTestDataValue = String(value);
+                }
+
+                const childData = {
+                    id: this.getUniqueId(),
+                    name: fieldName,
+                    type: childType,
+                    [childTestDataField]: childTestDataValue
+                };
+
+                parentData.children.push(childData);
+            }
+
+            // Build test data object for parent
+            const testDataObj = {};
+            for (const [fieldName, value] of childrenData) {
+                testDataObj[fieldName] = value;
+            }
+            parentData.testData = JSON.stringify(testDataObj);
+
+            parentParameter = this.createParameter(parentData, null);
+        } else {
+            // Update existing parent parameter
+            const currentTestData = parentParameter.getValue('testData');
+            let testDataObj = {};
+
+            try {
+                if (currentTestData) {
+                    testDataObj = JSON.parse(currentTestData);
+                }
+            } catch (e) {
+                console.warn('Failed to parse existing test data:', e);
+            }
+
+            // Merge new data
+            for (const [fieldName, value] of childrenData) {
+                testDataObj[fieldName] = value;
+            }
+
+            const newTestData = JSON.stringify(testDataObj);
+            parentParameter.setValue('testData', newTestData);
+        }
+
+        return parentParameter;
+    }    ///////////////////////////////////////////////////////////////////////////
     // API functions
     ///////////////////////////////////////////////////////////////////////////
 
@@ -1628,7 +1912,7 @@ export default class ReportBro {
             for (const docElementData of report.docElements) {
                 if (docElementData.elementType === DocElement.type.table) {
                     let width = 0;
-                    for (let i=0; i < docElementData.headerData.columnData.length; i++) {
+                    for (let i = 0; i < docElementData.headerData.columnData.length; i++) {
                         width += docElementData.headerData.columnData[i].width;
                     }
                     docElementData.width = width;
@@ -1752,7 +2036,7 @@ export default class ReportBro {
                         if (xhr.status === 200) {
                             if (xhr.response.type === 'application/json') {
                                 const reader = new FileReader();
-                                reader.addEventListener("loadend", function() {
+                                reader.addEventListener("loadend", function () {
                                     const data = reader.result;
                                     try {
                                         const obj = JSON.parse(data);
@@ -1923,8 +2207,8 @@ export default class ReportBro {
 
         for (let parameter of parameters) {
             if (parentName !== null && (parameter.getValue('type') === Parameter.type.map ||
-                    parameter.getValue('type') === Parameter.type.array) &&
-                    parameter.getValue('name') === parentName) {
+                parameter.getValue('type') === Parameter.type.array) &&
+                parameter.getValue('name') === parentName) {
                 // search recursively for parameter inside map/array
                 return this.getParameterByNameInternal(fieldName, parameter);
             } else if (parentName === null && parameter.getValue('name') === parameterName) {
@@ -1975,7 +2259,7 @@ export default class ReportBro {
         let parameter = new Parameter(parameterData.id, parameterData, this);
         let parentPanel = null;
         if (parent && (parent.getValue('type') === Parameter.type.array ||
-                parent.getValue('type') === Parameter.type.map)) {
+            parent.getValue('type') === Parameter.type.map)) {
             // create parameter inside parent, i.e. parameter is a field inside a map or array
             parentPanel = parent.getPanelItem();
         } else {
@@ -1995,7 +2279,7 @@ export default class ReportBro {
         parentPanel.appendChild(panelItem);
         parameter.setup();
         if (adminMode && !showOnlyNameType && parameter.getValue('type') !== Parameter.type.array &&
-                parameter.getValue('type') !== Parameter.type.map) {
+            parameter.getValue('type') !== Parameter.type.map) {
             document.getElementById(`rbro_menu_item_add${parameter.getId()}`).style.display = 'none';
             document.getElementById(`rbro_menu_item_children${parameter.getId()}`).style.display = 'none';
             document.getElementById(`rbro_menu_item_children_toggle${parameter.getId()}`).style.display = 'none';
@@ -2033,7 +2317,7 @@ export default class ReportBro {
      * @param {DocElement} element - doc element to delete.
      */
     deleteDocElement(element) {
-        for (let i=0; i < this.docElements.length; i++) {
+        for (let i = 0; i < this.docElements.length; i++) {
             if (this.docElements[i].getId() === element.getId()) {
                 this.docElements.splice(i, 1);
                 this.deleteDataObject(element);

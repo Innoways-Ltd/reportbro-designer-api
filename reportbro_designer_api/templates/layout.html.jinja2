@@ -5,10 +5,10 @@
     <title>{{ _('menu.application title') }}</title>
     <meta charset="utf-8"/>
     <meta name="application-name" content="{{ _('menu.application title') }}"/>
-    <link href="{{ url_for('static', path='css/base.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ url_for('static', path='reportbro/reportbro.css') }}" rel="stylesheet" type="text/css"/>
-    <script src="{{ url_for('static', path='reportbro/reportbro.js') }}"></script>
-    <script src="{{ url_for('static', path='ext/jquery.js') }}"></script>
+    <link href="{{ url_for('static', path='css/base.css') }}?v={{ range(100000, 999999) | random }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ url_for('static', path='reportbro/reportbro.css') }}?v={{ range(100000, 999999) | random }}" rel="stylesheet" type="text/css"/>
+    <script src="{{ url_for('static', path='reportbro/reportbro.js') }}?v={{ range(100000, 999999) | random }}"></script>
+    <script src="{{ url_for('static', path='ext/jquery.js') }}?v={{ range(100000, 999999) | random }}"></script>
     <link rel="SHORTCUT ICON" href="{{ url_for('static', path='images/favicon.ico') }}" type="image/x-icon">
 </head>
 
