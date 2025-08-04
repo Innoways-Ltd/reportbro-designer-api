@@ -12,7 +12,7 @@ jobs:
       - name: 'Pull LFS files'
         run: |
           git lfs install
-          git lfs pull
+          git lfs push --all
       - name: 'Allow incomplete LFS push'
         run: git config lfs.allowincompletepush true
       - name: 'Mirror to gitlab'
