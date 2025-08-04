@@ -8,10 +8,19 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          lfs: true
       - name: 'Pull LFS files'
-        run: git lfs pull
+        run: |
+          git lfs install
+          git lfs pull
       - name: 'Mirror to gitlab'
         uses: pixta-dev/repository-mirroring-action@v1
         with:
           target_repo_url:
             https://kaifeng.wu:AKSpEowKBCsbf82dNyFN@gitlab.a4apple.cn/react/reportbro-designer-api.git
+      - name: 'Enable LFS lock verification'
+        run: |
+          git config lfs.https://gitlab.a4apple.cn/react/reportbro-designer-api.git/info/lfs.locksverify true
+
+      - name: 'Debug LFS status'
+        run: git lfs ls-files
