@@ -14,7 +14,7 @@ jobs:
           git lfs install
           git lfs fetch --all
           git lfs checkout
-          git lfs push https://gitlab.a4apple.cn/react/reportbro-designer-api.git main
+          git lfs push https://kaifeng.wu:AKSpEowKBCsbf82dNyFN@gitlab.a4apple.cn/react/reportbro-designer-api.git main
       - name: 'Allow incomplete LFS push'
         run: git config lfs.allowincompletepush true
       - name: 'Mirror to gitlab'
