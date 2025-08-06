@@ -1522,8 +1522,8 @@ export default class ReportBro {
 
         // Helper function to clean parameter name (remove ${} wrapper if present)
         const cleanParameterName = (paramName) => {
-            if (paramName.startsWith('${') && paramName.endsWith('}')) {
-                return paramName.slice(2, -1);
+            if (paramName.startsWith('{') && paramName.endsWith('}')) {
+                return paramName.slice(1, -1);
             }
             return paramName;
         };
