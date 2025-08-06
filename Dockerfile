@@ -1,6 +1,9 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:3.8-slim
 
+ARG NODE_ENV=dev
+ENV NODE_ENV=${NODE_ENV}
+
 EXPOSE 7651
 
 # Keeps Python from generating .pyc files in the container
@@ -16,6 +19,7 @@ RUN python -m pip install -r requirements.txt
 WORKDIR /app
 COPY ./reportbro_designer_api /app/reportbro_designer_api
 COPY ./reportbro-lib /app/reportbro-lib
+COPY .env.* /app/
 RUN python -m pip install /app/reportbro-lib
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
@@ -25,4 +29,4 @@ USER appuser
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 COPY logging.conf /app/logging.conf
-CMD ["gunicorn", "--bind", "0.0.0.0:7651", "--timeout=600", "--log-config=logging.conf", "-k", "uvicorn.workers.UvicornWorker", "reportbro_designer_api.main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "--timeout=600", "--log-config=logging.conf", "-k", "uvicorn.workers.UvicornWorker", "reportbro_designer_api.main:app"]
