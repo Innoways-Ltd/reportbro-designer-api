@@ -17,6 +17,7 @@ from sqlalchemy.engine.url import make_url
 TEMPLATES_PATH = pkg_resources.resource_filename("reportbro_designer_api", "templates")
 STATIC_PATH = pkg_resources.resource_filename("reportbro_designer_api", "static")
 FONTS_PATH = os.path.join(STATIC_PATH, "fonts")
+NODE_ENV = os.environ.get("NODE_ENV", "dev")
 PROD = os.environ.get("PROD", "")
 
 
@@ -51,8 +52,8 @@ class Settings(BaseSettings):
     # sqlite+aiosqlite:///./reportbro.db
     # mysql+aiomysql://root:root@localhost/reportbro
     # postgresql+asyncpg://postgres:postgres@localhost:5432/reportbro
-    DB_URL: str = "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro"
-    STORAGE_URL: str = "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro"
+    DB_URL: str = os.environ.get("DB_URL", "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro")
+    STORAGE_URL: str = os.environ.get("STORAGE_URL", "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro")
 
     @property
     def db_url_mark(self):
@@ -93,7 +94,7 @@ class Settings(BaseSettings):
     class Config:
         """Config."""
 
-        env_file = ".env." + PROD if PROD else ".env"
+        env_file = ".env." + NODE_ENV if NODE_ENV else ".env"
 
 
 @lru_cache()
@@ -103,3 +104,7 @@ def get_settings():
 
 
 settings = Settings()
+print(f"[DB_URL]: {settings.DB_URL}")
+print(f"[STORAGE_URL]: {settings.STORAGE_URL}")
+print(f"[NODE_ENV]: {NODE_ENV}")
+print(f"[ENV_FILE]: .env.{NODE_ENV}")
