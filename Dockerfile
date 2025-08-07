@@ -4,7 +4,7 @@ FROM python:3.8-slim
 ARG NODE_ENV=dev
 ENV NODE_ENV=${NODE_ENV}
 
-EXPOSE 7651
+EXPOSE 80
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
