@@ -41,11 +41,31 @@ class TrustProxyHeadersMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         """Handle the request and modify scheme if HTTPS proxy headers are present."""
-        # Check for HTTPS from proxy headers
-        if (request.headers.get("x-forwarded-proto") == "https" or
+        # Check for HTTPS from proxy headers first
+        is_https = (
+            request.headers.get("x-forwarded-proto") == "https" or
             request.headers.get("x-forwarded-protocol") == "https" or
-            request.headers.get("x-forwarded-ssl") == "on"):
-            
+            request.headers.get("x-forwarded-ssl") == "on"
+        )
+        
+        # If FORCE_HTTPS is enabled, always use HTTPS
+        if settings.FORCE_HTTPS:
+            is_https = True
+        
+        # If proxy headers don't indicate HTTPS, check if request came via standard HTTPS port
+        # or if the host matches configured HTTPS domains
+        if not is_https:
+            host = request.headers.get("host", "")
+            # Check if host matches any configured HTTPS domains
+            for https_domain in settings.HTTPS_DOMAINS:
+                if https_domain.strip() and https_domain.strip() in host:
+                    is_https = True
+                    break
+            # Also check for standard HTTPS port
+            if not is_https and request.headers.get("x-forwarded-port") == "443":
+                is_https = True
+        
+        if is_https:
             # Modify the request scope to indicate HTTPS
             request.scope["scheme"] = "https"
             # Also update the server info to reflect HTTPS
@@ -183,12 +203,17 @@ def get_app() -> FastAPI:
     @rapp.get("/test-https-detection")
     async def test_https_detection(request: Request):
         """Test endpoint to verify HTTPS proxy header detection."""
+        # Get all headers for debugging
+        all_headers = {k: v for k, v in request.headers.items()}
+        
         return {
             "request_url": str(request.url),
             "request_scheme": request.url.scheme,
             "base_url": str(request.base_url),
             "trust_proxy_headers": settings.TRUST_PROXY_HEADERS,
             "static_url": str(request.url_for("static", path="css/base.css")),
+            "scope_scheme": request.scope.get("scheme", "not_set"),
+            "all_headers": all_headers,
             "relevant_headers": {
                 "x-forwarded-proto": request.headers.get("x-forwarded-proto"),
                 "x-forwarded-protocol": request.headers.get("x-forwarded-protocol"),
