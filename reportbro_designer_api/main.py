@@ -183,12 +183,17 @@ def get_app() -> FastAPI:
     @rapp.get("/test-https-detection")
     async def test_https_detection(request: Request):
         """Test endpoint to verify HTTPS proxy header detection."""
+        # Get all headers for debugging
+        all_headers = {k: v for k, v in request.headers.items()}
+        
         return {
             "request_url": str(request.url),
             "request_scheme": request.url.scheme,
             "base_url": str(request.base_url),
             "trust_proxy_headers": settings.TRUST_PROXY_HEADERS,
             "static_url": str(request.url_for("static", path="css/base.css")),
+            "scope_scheme": request.scope.get("scheme", "not_set"),
+            "all_headers": all_headers,
             "relevant_headers": {
                 "x-forwarded-proto": request.headers.get("x-forwarded-proto"),
                 "x-forwarded-protocol": request.headers.get("x-forwarded-protocol"),
