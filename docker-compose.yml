@@ -20,7 +20,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     ports:
-      - 7651:7651
+      - 7651:80
     environment:
       <<: *reportbro-common-env
     depends_on:
