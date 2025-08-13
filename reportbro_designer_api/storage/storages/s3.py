@@ -55,18 +55,29 @@ class S3Storage(StorageBase):
     ):
         """Put file."""
         s3_obj = self.s3parse(s3_key)
+        
+        # Try to guess the content type
         content = guess(file_buffer)
-        if not content:
-            raise StorageError("filetype support")
-
-        content = content.mime
+        if content:
+            content_type = content.mime
+        else:
+            # If filetype can't detect, try to determine from filename or default to JSON
+            if s3_obj.path.endswith('.json'):
+                content_type = 'application/json'
+            elif s3_obj.path.endswith('.pdf'):
+                content_type = 'application/pdf'
+            elif s3_obj.path.endswith('.xlsx'):
+                content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            else:
+                # Default to octet-stream for unknown files
+                content_type = 'application/octet-stream'
         assert s3_obj.hostname
         async with self._s3cli.s3cli() as client:
             res = await client.put_object(
                 Bucket=s3_obj.hostname,
                 Key=s3_obj.path,
                 Body=BytesIO(file_buffer),
-                ContentType=content,
+                ContentType=content_type,
             )
             if res.get("ResponseMetadata", {}).get("HTTPStatusCode", "") != 200:
                 raise StorageError(f"Save file error[{res}]")
