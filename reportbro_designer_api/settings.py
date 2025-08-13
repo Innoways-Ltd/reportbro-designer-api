@@ -17,6 +17,7 @@ from sqlalchemy.engine.url import make_url
 TEMPLATES_PATH = pkg_resources.resource_filename("reportbro_designer_api", "templates")
 STATIC_PATH = pkg_resources.resource_filename("reportbro_designer_api", "static")
 FONTS_PATH = os.path.join(STATIC_PATH, "fonts")
+NODE_ENV = os.environ.get("NODE_ENV", "dev")
 PROD = os.environ.get("PROD", "")
 
 
@@ -39,9 +40,11 @@ class Settings(BaseSettings):
     
     # Proxy configuration for HTTPS handling
     TRUST_PROXY_HEADERS: bool = bool(os.environ.get("TRUST_PROXY_HEADERS", "true") == "true")
+    FORCE_HTTPS: bool = bool(os.environ.get("FORCE_HTTPS", "false") == "true")
+    HTTPS_DOMAINS: list = os.environ.get("HTTPS_DOMAINS", "zmallplanet.com,a4apple.cn").split(",")
     
     # CORS configuration
-    CORS_ALLOW_ORIGINS: list = os.environ.get("CORS_ALLOW_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,https://dp.a4apple.cn").split(",")
+    CORS_ALLOW_ORIGINS: list = os.environ.get("CORS_ALLOW_ORIGINS", "*").split(",")
 
     DOWNLOAD_TIMEOUT: int = 180
     PROCESS_POOL_SIZE: int = 0
@@ -51,8 +54,8 @@ class Settings(BaseSettings):
     # sqlite+aiosqlite:///./reportbro.db
     # mysql+aiomysql://root:root@localhost/reportbro
     # postgresql+asyncpg://postgres:postgres@localhost:5432/reportbro
-    DB_URL: str = "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro"
-    STORAGE_URL: str = "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro"
+    DB_URL: str = os.environ.get("DB_URL", "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro")
+    STORAGE_URL: str = os.environ.get("STORAGE_URL", "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro")
 
     @property
     def db_url_mark(self):
@@ -93,7 +96,7 @@ class Settings(BaseSettings):
     class Config:
         """Config."""
 
-        env_file = ".env." + PROD if PROD else ".env"
+        env_file = ".env." + NODE_ENV if NODE_ENV else ".env"
 
 
 @lru_cache()
@@ -103,3 +106,7 @@ def get_settings():
 
 
 settings = Settings()
+print(f"[DB_URL]: {settings.DB_URL}")
+print(f"[STORAGE_URL]: {settings.STORAGE_URL}")
+print(f"[NODE_ENV]: {NODE_ENV}")
+print(f"[ENV_FILE]: .env.{NODE_ENV}")

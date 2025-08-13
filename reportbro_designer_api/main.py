@@ -41,11 +41,31 @@ class TrustProxyHeadersMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         """Handle the request and modify scheme if HTTPS proxy headers are present."""
-        # Check for HTTPS from proxy headers
-        if (request.headers.get("x-forwarded-proto") == "https" or
+        # Check for HTTPS from proxy headers first
+        is_https = (
+            request.headers.get("x-forwarded-proto") == "https" or
             request.headers.get("x-forwarded-protocol") == "https" or
-            request.headers.get("x-forwarded-ssl") == "on"):
-            
+            request.headers.get("x-forwarded-ssl") == "on"
+        )
+        
+        # If FORCE_HTTPS is enabled, always use HTTPS
+        if settings.FORCE_HTTPS:
+            is_https = True
+        
+        # If proxy headers don't indicate HTTPS, check if request came via standard HTTPS port
+        # or if the host matches configured HTTPS domains
+        if not is_https:
+            host = request.headers.get("host", "")
+            # Check if host matches any configured HTTPS domains
+            for https_domain in settings.HTTPS_DOMAINS:
+                if https_domain.strip() and https_domain.strip() in host:
+                    is_https = True
+                    break
+            # Also check for standard HTTPS port
+            if not is_https and request.headers.get("x-forwarded-port") == "443":
+                is_https = True
+        
+        if is_https:
             # Modify the request scope to indicate HTTPS
             request.scope["scheme"] = "https"
             # Also update the server info to reflect HTTPS
@@ -70,21 +90,14 @@ class UiStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         """get_response."""
         response = await super().get_response(path, scope)
-        # if response.status_code == 404:
-        #     response = await super().get_response(".", scope)
-        # request.url_for(
+        
         if isinstance(response, FileResponse) and isinstance(response.path, str):
-            # Check for HTTPS from proxy headers only if proxy headers are trusted
-            headers = dict(scope.get("headers", []))
-            scheme = "http"
+            # Get the scheme from scope (should be set by TrustProxyHeadersMiddleware)
+            scheme = scope.get("scheme", "http")
             
-            # Check common proxy headers for HTTPS only if trust is enabled
-            if settings.TRUST_PROXY_HEADERS and (
-                headers.get(b"x-forwarded-proto") == b"https" or
-                headers.get(b"x-forwarded-protocol") == b"https" or
-                headers.get(b"x-forwarded-ssl") == b"on"
-            ):
-                scheme = "https"
+            # Get host from headers
+            headers = dict(scope.get("headers", []))
+            host = headers.get(b"host", b"localhost").decode()
             
             if len(self.FILE_JS_PATH_REGIX.findall(response.path)) > 0:
                 with open(response.path, "r", encoding="utf8") as fs:
@@ -93,19 +106,6 @@ class UiStaticFiles(StaticFiles):
                 root_path = scope.get("root_path", "")
                 app_root_path = scope.get("app_root_path", scope.get("root_path", ""))
                 
-                # Ensure the paths use the correct scheme
-                if scheme == "https":
-                    if root_path and not root_path.startswith("https://"):
-                        if root_path.startswith("http://"):
-                            root_path = root_path.replace("http://", "https://", 1)
-                        elif not root_path.startswith("/"):
-                            # If it's a relative path, we don't need to modify it
-                            pass
-                    
-                    if app_root_path and not app_root_path.startswith("https://"):
-                        if app_root_path.startswith("http://"):
-                            app_root_path = app_root_path.replace("http://", "https://", 1)
-
                 content = content.replace(
                     'path:"/ui",', f'path:"{root_path}",'
                 )
@@ -118,14 +118,11 @@ class UiStaticFiles(StaticFiles):
                 with open(response.path, "r", encoding="utf8") as fs:
                     content = fs.read()
 
-                # Use the same scheme detection as above
-                url_ = URL(scope=scope)
-                # Manually construct the URL with the correct scheme
-                if scheme == "https" and url_.scheme == "http":
-                    url_str = str(url_).replace("http://", "https://", 1)
-                    url_ = URL(url_str)
+                # Construct base URL with correct scheme
+                base_url = f"{scheme}://{host}"
                 
-                content = self.FILE_PATH_REGIX.sub(f'\\1="{url_}\\2"', content)
+                # Replace relative paths with absolute URLs using the correct scheme
+                content = self.FILE_PATH_REGIX.sub(f'\\1="{base_url}/ui/\\2"', content)
                 return HTMLResponse(content=content)
         return response
 
@@ -206,12 +203,17 @@ def get_app() -> FastAPI:
     @rapp.get("/test-https-detection")
     async def test_https_detection(request: Request):
         """Test endpoint to verify HTTPS proxy header detection."""
+        # Get all headers for debugging
+        all_headers = {k: v for k, v in request.headers.items()}
+        
         return {
             "request_url": str(request.url),
             "request_scheme": request.url.scheme,
             "base_url": str(request.base_url),
             "trust_proxy_headers": settings.TRUST_PROXY_HEADERS,
             "static_url": str(request.url_for("static", path="css/base.css")),
+            "scope_scheme": request.scope.get("scheme", "not_set"),
+            "all_headers": all_headers,
             "relevant_headers": {
                 "x-forwarded-proto": request.headers.get("x-forwarded-proto"),
                 "x-forwarded-protocol": request.headers.get("x-forwarded-protocol"),
