@@ -147,3 +147,31 @@ class TemplateDataResponse(DataResponse[TemplateListData]):
 
 class TemplateDownLoadResponse(DataResponse[TemplateDownLoadData]):
     """TemplateDownLoadResponse."""
+
+
+class RequestExportTemplate(BaseModel):
+    """RequestExportTemplate."""
+
+    tid: str = Field(title="Template id")
+    version_id: Optional[str] = Field(None, title="Template version id")
+
+
+class RequestImportTemplate(BaseModel):
+    """RequestImportTemplate."""
+
+    template_name: str = Field(title="Template name")
+    template_type: str = Field(title="Template type")
+    template_data: dict = Field(title="Template export data")
+    tid: Optional[str] = Field(None, title="Optional template id")
+
+
+class TemplateExportData(BaseModel):
+    """TemplateExportData."""
+
+    export_key: str = Field(title="Export file key")
+    export_url: str = Field(title="Export file download url")
+    filename: str = Field(title="Export filename")
+
+
+class TemplateExportResponse(DataResponse[TemplateExportData]):
+    """TemplateExportResponse."""

@@ -61,6 +61,7 @@ from .reportbro_schema import RequestGenerateReviewTemplate
 from .reportbro_schema import RequestGenerateTemplate
 from .reportbro_schema import RequestGenerateTUrlTemplate
 from .reportbro_schema import RequestGenerateUrlTemplate
+from .reportbro_schema import RequestImportTemplate
 from .reportbro_schema import RequestMultiGenerateTemplate
 from .reportbro_schema import RequestReviewTemplate
 from .reportbro_schema import RequestUploadTemplate
@@ -299,6 +300,79 @@ async def create_templates_tid(
 
 
 @router.post(
+    "/templates/import",
+    tags=TAGS,
+    name="Import Template",
+    response_model=TemplateDataResponse,
+)
+async def import_template(
+    request: Request,
+    req: RequestImportTemplate,
+    client: BackendBase = Depends(get_meth_cli),
+):
+    """Import Template from JSON data."""
+    if not req.template_data:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail="template_data is empty",
+        )
+
+    # Validate that the template_data has the required structure
+    required_keys = ["docElements", "parameters", "documentProperties"]
+    if not all(key in req.template_data for key in required_keys):
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail=f"template_data must contain: {', '.join(required_keys)}",
+        )
+
+    # Create the report structure from the imported data
+    report_data = {
+        "docElements": req.template_data.get("docElements", []),
+        "parameters": req.template_data.get("parameters", []),
+        "styles": req.template_data.get("styles", []),
+        "watermarks": req.template_data.get("watermarks", []),
+        "version": req.template_data.get("version", 5),
+        "documentProperties": req.template_data.get("documentProperties", {})
+    }
+
+    try:
+        # Create new template with imported data
+        if req.tid:
+            # Import with specific tid
+            rrr = await client.put_template(
+                tid=req.tid,
+                template_name=req.template_name,
+                template_type=req.template_type,
+                report=report_data,
+            )
+        else:
+            # Import with auto-generated tid
+            rrr = await client.put_template(
+                template_name=req.template_name,
+                template_type=req.template_type,
+                report=report_data,
+            )
+        
+        return TemplateDataResponse(
+            code=HTTP_200_OK,
+            error="ok",
+            data=TemplateListData(
+                updated_at=datetime.now(),
+                template_name=req.template_name,
+                template_type=req.template_type,
+                tid=rrr.tid,
+                version_id=rrr.version_id,
+                template_designer_page=str(
+                    request.url_for("Templates Designer page", tid=rrr.tid)
+                ),
+            ),
+        )
+    except HTTPException as ex:
+        # Re-raise HTTPExceptions (including duplicate template name error)
+        raise ex
+
+
+@router.post(
     "/templates/{tid}",
     tags=TAGS,
     name="Save Templates",
@@ -427,6 +501,42 @@ async def delete_templates(
     """Delete Templates."""
     await client.delete_template(tid, version_id)
     return ErrorResponse(code=HTTP_200_OK, error="ok")
+
+
+# ----------------------------------------------
+#        Template Export/Import
+# ----------------------------------------------
+
+
+@router.post(
+    "/templates/{tid}/export",
+    tags=TAGS,
+    name="Export Template",
+)
+async def export_template(
+    tid: str = Path(title="Template id"),
+    version_id: Optional[str] = Query(
+        None, title="Template version id", alias="versionId"
+    ),
+    client: BackendBase = Depends(get_meth_cli),
+):
+    """Export Template as JSON data."""
+    template = await client.get_template(tid, version_id)
+    if not template:
+        raise TemplageNotFoundError("template not found")
+
+    # Create export data structure
+    export_data = {
+        "docElements": template.report.get("docElements", []),
+        "parameters": template.report.get("parameters", []),
+        "styles": template.report.get("styles", []),
+        "watermarks": template.report.get("watermarks", []),
+        "version": template.report.get("version", 5),
+        "documentProperties": template.report.get("documentProperties", {})
+    }
+    
+    # Return JSON directly
+    return export_data
 
 
 # ----------------------------------------------
