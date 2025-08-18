@@ -63,14 +63,21 @@ def fill_default(report_definition, data):
         _type = _parame["type"]
         _name = _parame["name"]
 
-        if _data.get(_name, None):
-            if _type == "map":
-                for ppp in _loop_params(_parame["children"]):
-                    _fill_default(ppp, _data[_name])
-            elif _type == "array":
-                for ppp in _loop_params(_parame["children"]):
-                    for data in _data[_name]:
-                        _fill_default(ppp, data)
+        # Fix: handle both dict and list types for _data
+        if isinstance(_data, dict):
+            if _data.get(_name, None):
+                if _type == "map":
+                    for ppp in _loop_params(_parame["children"]):
+                        _fill_default(ppp, _data[_name])
+                elif _type == "array":
+                    for ppp in _loop_params(_parame["children"]):
+                        for data_item in _data[_name]:
+                            _fill_default(ppp, data_item)
+                return
+        elif isinstance(_data, list):
+            # If _data is a list, apply fill_default to each item
+            for item in _data:
+                _fill_default(_parame, item)
             return
 
         nullable = _parame.get("nullable", False)
