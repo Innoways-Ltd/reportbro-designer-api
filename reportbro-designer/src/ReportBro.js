@@ -1520,14 +1520,6 @@ export default class ReportBro {
             return;
         }
 
-        // Helper function to clean parameter name (remove ${} wrapper if present)
-        const cleanParameterName = (paramName) => {
-            if (paramName.startsWith('{') && paramName.endsWith('}')) {
-                return paramName.slice(1, -1);
-            }
-            return paramName;
-        };
-
         // Helper function to set test data based on parameter type
         const setParameterTestData = (parameter, value) => {
             const paramType = parameter.getValue('type');
@@ -1536,19 +1528,15 @@ export default class ReportBro {
             if (paramType === Parameter.type.map ||
                 paramType === Parameter.type.array ||
                 paramType === Parameter.type.simpleArray) {
-                // For complex types, store as JSON string in testData
                 field = 'testData';
                 processedValue = JSON.stringify(value);
                 cmdType = SetValueCmd.type.text;
             } else if (paramType === Parameter.type.boolean) {
-                // For boolean parameters, use testDataBoolean
                 field = 'testDataBoolean';
                 processedValue = Boolean(value);
                 cmdType = SetValueCmd.type.checkbox;
             } else if (paramType === Parameter.type.image) {
-                // For image parameters, handle special format
                 if (typeof value === 'object' && value.data && value.filename) {
-                    // Use command to set both fields
                     const cmd1 = new SetValueCmd(parameter.id, 'testDataImage', value.data, SetValueCmd.type.file, this);
                     const cmd2 = new SetValueCmd(parameter.id, 'testDataImageFilename', value.filename, SetValueCmd.type.filename, this);
                     this.executeCommand(new CommandGroupCmd([cmd1, cmd2], this));
@@ -1559,103 +1547,116 @@ export default class ReportBro {
                     cmdType = SetValueCmd.type.file;
                 }
             } else if (paramType === Parameter.type.richText) {
-                // For rich text parameters, use testDataRichText
                 field = 'testDataRichText';
                 processedValue = String(value);
                 cmdType = SetValueCmd.type.text;
             } else {
-                // For string, number, date and other simple types, use testData
                 field = 'testData';
                 processedValue = String(value);
                 cmdType = SetValueCmd.type.text;
             }
 
-            // Use SetValueCmd exactly like ParameterPanel does
             try {
                 const cmd = new SetValueCmd(parameter.id, field, processedValue, cmdType, this);
                 this.executeCommand(cmd);
             } catch (error) {
-                // Fallback to direct setValue with manual UI refresh
                 parameter.setValue(field, processedValue);
-
-                // Force UI refresh for this parameter
                 if (this.detailPanels && this.detailPanels[this.activeDetailPanel]) {
-                    // If this parameter is currently selected, update its display
                     if (this.isSelectedObject(parameter.id)) {
                         this.detailPanels[this.activeDetailPanel].updateDisplay(field);
                     }
                 }
-
-                // Also manually trigger any notification listeners
                 if (this.detailPanels && this.detailPanels[this.activeDetailPanel]) {
                     this.detailPanels[this.activeDetailPanel].notifyEvent(parameter, Command.operation.change, field);
                 }
             }
-        };        // Group data by parent parameter for batch processing
-        const parentDataMap = new Map();
+        };
 
-        // Process each data key-value pair
-        for (const [key, value] of Object.entries(data)) {
-            const cleanKey = cleanParameterName(key);
+        // Recursively set parameter values to match data structure
+        // New function to create parameter with parent
+        const createNestedParameter = (name, value, parent) => {
+            let paramType;
+            let testDataField;
+            let testDataValue;
 
-            if (cleanKey.includes('.')) {
-                // Handle dotted notation like "CompanyDetails.Name"
-                const parts = cleanKey.split('.');
-                const parentName = parts[0];
-                const fieldName = parts.slice(1).join('.');
-
-                // Check if parent parameter exists
-                let parentParameter = this.getParameterByName(parentName);
-                if (parentParameter) {
-                    // Parent exists, update its test data to include this field
-                    const currentTestData = parentParameter.getValue('testData');
-                    let testDataObj = {};
-
-                    try {
-                        testDataObj = currentTestData ? JSON.parse(currentTestData) : {};
-                    } catch (e) {
-                        console.warn(`Invalid JSON in testData for ${parentName}, using empty object`);
-                        testDataObj = {};
-                    }
-
-                    // Set the field value
-                    testDataObj[fieldName] = value;
-
-                    // Update the parent parameter's test data
-                    const newTestData = JSON.stringify(testDataObj);
-                    setParameterTestData(parentParameter, testDataObj);
-                } else {
-                    // Parent doesn't exist, group for creation
-                    if (!parentDataMap.has(parentName)) {
-                        parentDataMap.set(parentName, new Map());
-                    }
-                    parentDataMap.get(parentName).set(fieldName, value);
-                }
+            if (typeof value === 'boolean') {
+                paramType = Parameter.type.boolean;
+                testDataField = 'testDataBoolean';
+                testDataValue = value;
+            } else if (Array.isArray(value)) {
+                paramType = Parameter.type.array;
+                testDataField = 'testData';
+                testDataValue = JSON.stringify(value);
+            } else if (typeof value === 'object' && value !== null) {
+                paramType = Parameter.type.map;
+                testDataField = 'testData';
+                testDataValue = JSON.stringify(value);
             } else {
-                // Simple parameter name (no dots)
-                let parameter = this.getParameterByName(cleanKey);
+                paramType = Parameter.type.string;
+                testDataField = 'testData';
+                testDataValue = String(value);
+            }
+
+            const parameterData = {
+                id: this.getUniqueId(),
+                name: name,
+                type: paramType,
+                [testDataField]: testDataValue
+            };
+            return this.createParameter(parameterData, parent);
+        };
+
+        // Updated recursive function to avoid duplicates
+        // Helper to get child parameter by name from parent
+        const getChildParameterByName = (parent, name) => {
+            if (!parent) return null;
+            if (typeof parent.getChildren === 'function') {
+                const children = parent.getChildren();
+                return children.find(p => p.getName && p.getName() === name) || null;
+            } else if (parent.children && Array.isArray(parent.children)) {
+                // fallback for raw data
+                return parent.children.find(p => p.name === name) || null;
+            }
+            return null;
+        };
+
+        const setParamsFromData = (dataObj, parent = null) => {
+            for (const [key, value] of Object.entries(dataObj)) {
+                let parameter = null;
+                if (parent) {
+                    parameter = getChildParameterByName(parent, key);
+                } else {
+                    parameter = this.getParameterByName(key);
+                }
 
                 if (parameter) {
-                    // Parameter found, set its test data
                     setParameterTestData(parameter, value);
                 } else {
-                    // Simple parameter - create immediately
-                    this.createSimpleParameter(cleanKey, value);
+                    parameter = createNestedParameter(key, value, parent);
+                }
+
+                // Recursively handle nested objects and arrays
+                if (typeof value === 'object' && value !== null) {
+                    if (Array.isArray(value)) {
+                        value.forEach((item) => {
+                            if (typeof item === 'object' && item !== null) {
+                                setParamsFromData(item, parameter);
+                            }
+                        });
+                    } else {
+                        setParamsFromData(value, parameter);
+                    }
                 }
             }
-        }
+        };
 
-        // Process grouped parent parameters
-        for (const [parentName, childrenData] of parentDataMap) {
-            this.createOrUpdateParentParameter(parentName, childrenData);
-        }
+        setParamsFromData(data);
 
-        // Simple approach: if any parameter is currently selected, trigger a reselection to refresh the UI
+        // UI refresh logic remains unchanged
         if (this.selections.length > 0) {
             const selectedId = this.selections[0];
             const selectedObj = this.getDataObject(selectedId);
             if (selectedObj instanceof Parameter) {
-                // Force refresh by deselecting and reselecting
                 this.deselectAll(false);
                 setTimeout(() => {
                     this.selectObject(selectedId, true);
@@ -1663,12 +1664,9 @@ export default class ReportBro {
             }
         }
 
-        // Try to refresh any parameter-related UI elements
         if (this.mainPanel) {
-            // Force refresh of the parameter section by triggering a DOM update
             const parametersContainer = document.querySelector('.rbroMainPanelParameterContainer');
             if (parametersContainer) {
-                // Trigger a DOM refresh by temporarily modifying a style
                 parametersContainer.style.opacity = '0.99';
                 setTimeout(() => {
                     parametersContainer.style.opacity = '';
