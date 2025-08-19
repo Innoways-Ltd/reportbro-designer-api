@@ -1509,7 +1509,7 @@ button.rbroMenuButton[disabled], button.rbroMenuButton[disabled]:hover,
   font-family: 'reportbro';
   src:
     url(src/iconfonts/reportbro.woff2?b720cd4cd389283e0ecc) format('woff2'),
-    url(src/iconfonts/reportbro.ttf?5d66733e875019c6808f) format('truetype'),
+    url(src/iconfonts/reportbro.ttf?f520137ad437ad42103a) format('truetype'),
     url(src/iconfonts/reportbro.woff?68c4b771add63bbe652a) format('woff'),
     url(src/iconfonts/reportbro.svg?92dcc88e36cc53ce4d02#reportbro) format('svg');
   font-weight: normal;
