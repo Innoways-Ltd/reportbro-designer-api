@@ -438,6 +438,37 @@ export default class ReportBro {
     }
 
     /**
+     * Returns an array of all existing parameter names.
+     * @returns {String[]} Array of parameter names.
+     */
+    getAllParameterNames() {
+        const parameterItems = this.getMainPanel().getParametersItem().getChildren();
+        const names = [];
+        function collectNames(parameter, prefix = "") {
+            const name = parameter.getValue('name');
+            const type = parameter.getValue('type');
+            const fullName = prefix ? `${prefix}.${name}` : name;
+            if (type === Parameter.type.map && typeof parameter.getChildren === 'function') {
+                // If parameter is an object/map, recursively collect child names
+                const children = parameter.getChildren();
+                if (Array.isArray(children) && children.length > 0) {
+                    for (const child of children) {
+                        collectNames(child, fullName);
+                    }
+                } else {
+                    names.push(fullName);
+                }
+            } else {
+                names.push(fullName);
+            }
+        }
+        for (const item of parameterItems) {
+            const parameter = item.getData();
+            collectNames(parameter);
+        }
+        return names;
+    }
+    /**
      * Validate properties used to initialize ReportBro.
      * In case of invalid properties additional info will be printed to the JS console.
      * @param {Object[]} properties - properties to validate

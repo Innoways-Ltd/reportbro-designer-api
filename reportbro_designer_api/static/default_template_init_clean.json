@@ -1,0 +1,26 @@
+{
+    "docElements": [],
+    "parameters": [],
+    "styles": [],
+    "version": 1,
+    "documentProperties": {
+        "pageFormat": "A4",
+        "pageWidth": "",
+        "pageHeight": "",
+        "unit": "mm",
+        "orientation": "portrait",
+        "contentHeight": "",
+        "marginLeft": "20",
+        "marginTop": "20",
+        "marginRight": "20",
+        "marginBottom": "10",
+        "header": false,
+        "headerSize": "60",
+        "headerDisplay": "always",
+        "footer": false,
+        "footerSize": "60",
+        "footerDisplay": "always",
+        "patternLocale": "en",
+        "patternCurrencySymbol": "€"
+    }
+}
