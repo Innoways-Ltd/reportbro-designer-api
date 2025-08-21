@@ -35,7 +35,7 @@ FONTS_LOADER = ReportFontsLoader(settings.FONTS_PATH)
 def load_default_template(purpose: str = "init") -> Any:
     """Load default template."""
     if purpose == "init":
-        tmp_path = settings.STATIC_PATH + "/default_template_init.json"
+        tmp_path = settings.STATIC_PATH + "/default_template_init_clean.json"
     else:
         tmp_path = settings.STATIC_PATH + "/default_template.json"
     if settings.DEFAULT_TEMPLATE_PATH:

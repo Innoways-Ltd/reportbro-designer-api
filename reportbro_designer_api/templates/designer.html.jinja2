@@ -85,6 +85,8 @@ window.addEventListener("message", function (event) {
         if (rb && externalData) {
             if (typeof rb.setExternalData === 'function') {
                 rb.setExternalData(externalData);
+                    const paramNames = rb.getAllParameterNames();
+                    window.parent.postMessage({ type: "parameterNames", payload: paramNames }, "*");
             }
         }
     }
@@ -97,6 +99,10 @@ window.addEventListener("message", function (event) {
         template_type = event.data.template_type;
         }
         saveReport();
+    }
+    if (event.data?.type === "getParameterNames") {
+        const paramNames = rb.getAllParameterNames();
+        window.parent.postMessage({ type: "parameterNames", payload: paramNames }, "*");
     }
 });
 </script>
