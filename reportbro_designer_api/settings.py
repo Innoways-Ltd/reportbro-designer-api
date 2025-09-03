@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # Proxy configuration for HTTPS handling
     TRUST_PROXY_HEADERS: bool = bool(os.environ.get("TRUST_PROXY_HEADERS", "true") == "true")
     FORCE_HTTPS: bool = bool(os.environ.get("FORCE_HTTPS", "false") == "true")
-    HTTPS_DOMAINS: list = os.environ.get("HTTPS_DOMAINS", "zmallplanet.com,a4apple.cn").split(",")
+    HTTPS_DOMAINS: list = os.environ.get("HTTPS_DOMAINS", "siia.group,zmallplanet.com,a4apple.cn").split(",")
     
     # CORS configuration
     CORS_ALLOW_ORIGINS: list = os.environ.get("CORS_ALLOW_ORIGINS", "*").split(",")
