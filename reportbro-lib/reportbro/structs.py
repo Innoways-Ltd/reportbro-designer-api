@@ -77,7 +77,7 @@ class Parameter:
                     # report instance can be null when test data is retrieved from parameters
                     if self.report:
                         self.report.errors.append(
-                            Error('errorMsgDuplicateParameterField', object_id=parameter.id, field='name'))
+                            Error('errorMsgDuplicateParameterField', object_id=parameter.id, field=parameter.name))
                 else:
                     self.children.append(parameter)
                     self.fields[parameter.name] = parameter
