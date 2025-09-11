@@ -624,7 +624,7 @@ class Report:
         for item in report_definition.get('parameters'):
             parameter = Parameter(self, item)
             if parameter.name in self.parameters:
-                self.errors.append(Error('errorMsgDuplicateParameter', object_id=parameter.id, field='name'))
+                self.errors.append(Error('errorMsgDuplicateParameter', object_id=parameter.id, field=parameter.name))
             self.parameters[parameter.name] = parameter
             parameter_list.append(parameter)
 
