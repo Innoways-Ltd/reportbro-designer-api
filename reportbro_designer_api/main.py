@@ -24,9 +24,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import URL
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.status import HTTP_400_BAD_REQUEST
 from starlette.status import HTTP_404_NOT_FOUND
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
+
+try:
+    from reportbro.errors import ReportBroInternalError, ReportBroError as ReportBroLibError
+except ImportError:
+    # Fallback if reportbro is not available
+    ReportBroInternalError = Exception
+    ReportBroLibError = Exception
 
 from .errors import ReportbroError
 from .router import router
@@ -231,6 +239,24 @@ def get_app() -> FastAPI:
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
         )
 
+    @rapp.exception_handler(ReportBroInternalError)
+    async def reportbro_internal_error_handler(request: Request, exc):
+        assert request
+        LOGGER.warning("reportbro_internal_error[%s]", exc)
+        return JSONResponse(
+            ErrorResponse(code=HTTP_400_BAD_REQUEST, error=str(exc)).dict(),
+            status_code=HTTP_400_BAD_REQUEST,
+        )
+
+    @rapp.exception_handler(ReportBroLibError)
+    async def reportbro_lib_error_handler(request: Request, exc):
+        assert request
+        LOGGER.warning("reportbro_lib_error[%s]", exc)
+        return JSONResponse(
+            ErrorResponse(code=HTTP_400_BAD_REQUEST, error=str(exc)).dict(),
+            status_code=HTTP_400_BAD_REQUEST,
+        )
+
     @rapp.exception_handler(ClientError)
     async def s3_exception_handler(request: Request, exc: ClientError):
         assert request
@@ -261,9 +287,11 @@ def get_app() -> FastAPI:
     async def all_exception_handler(request: Request, exc: Exception):
         assert request
         LOGGER.error("unknow_error[%s]%s", exc, traceback.format_exc())
+        # Return the actual error message instead of generic "unknown error"
+        error_message = str(exc) if str(exc) else "unknown error"
         return JSONResponse(
             ErrorResponse(
-                code=HTTP_500_INTERNAL_SERVER_ERROR, error="unknow error"
+                code=HTTP_500_INTERNAL_SERVER_ERROR, error=error_message
             ).dict(),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )

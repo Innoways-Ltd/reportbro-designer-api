@@ -37,6 +37,12 @@ from fastapi import Request
 from fastapi.responses import PlainTextResponse
 from fastapi.responses import StreamingResponse
 from reportbro import ReportBroError
+try:
+    from reportbro.errors import ReportBroInternalError, ReportBroError as ReportBroLibError
+except ImportError:
+    # Fallback if specific error classes are not available
+    ReportBroInternalError = ReportBroError
+    ReportBroLibError = ReportBroError
 from starlette.status import HTTP_200_OK
 from starlette.status import HTTP_400_BAD_REQUEST
 
@@ -566,13 +572,21 @@ def gen_file_from_report(
         process_image_urls(report_definition, data)
 
         report = ReportPdf(report_definition, data, FONTS_LOADER, is_test_data)
-    except ReportBroError as ex:
+    except (ReportBroError, ReportBroInternalError, ReportBroLibError) as ex:
         LOGGER.warning(
             "failed to initialize report: %s %s", str(ex), traceback.format_exc()
         )
         raise HTTPException(
             status_code=HTTP_400_BAD_REQUEST,
-            detail=f"failed to initialize report[{ex}]",
+            detail=f"failed to initialize report: {str(ex)}",
+        ) from ex
+    except Exception as ex:
+        LOGGER.error(
+            "unexpected error during report initialization: %s %s", str(ex), traceback.format_exc()
+        )
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail=f"unexpected error during report initialization: {str(ex)}",
         ) from ex
 
     if report.report.errors:
@@ -597,14 +611,23 @@ def gen_file_from_report(
             filename = "report-" + str(now) + ".xlsx"
             assert isinstance(report_file, bytearray)
             return filename, bytes(report_file)
-    except ReportBroError as ex:
+    except (ReportBroError, ReportBroInternalError, ReportBroLibError) as ex:
         # in case an error occurs during report report generate
         # a ReportBroError exception is thrown
         # to stop processing. We return this error within a list so the error can be
         # processed by ReportBro Designer.
         raise HTTPException(
             status_code=HTTP_400_BAD_REQUEST,
-            detail=f"failed to generate report[{ex}]",
+            detail=f"failed to generate report: {str(ex)}",
+        ) from ex
+    except Exception as ex:
+        # catch any other unexpected errors during report generation
+        LOGGER.error(
+            "unexpected error during report generation: %s %s", str(ex), traceback.format_exc()
+        )
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail=f"unexpected error during report generation: {str(ex)}",
         ) from ex
     finally:
         end = timer()
