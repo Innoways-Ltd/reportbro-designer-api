@@ -184,7 +184,7 @@ export default class PanelBase {
                 }
 
                 if (field === null || property === field ||
-                        (visibleIf && propertyDescriptor.visibleIfFields.includes(field))) {
+                    (visibleIf && propertyDescriptor?.visibleIfFields?.includes(field))) {
                     let show = false;
                     if (property in sharedProperties) {
                         if (sharedProperties[property] === selectedObjects.length) {
@@ -209,7 +209,7 @@ export default class PanelBase {
                             }
 
                             if (differentValues && propertyDescriptor['type'] === SetValueCmd.type.select &&
-                                    propertyDescriptor['allowEmpty']) {
+                                propertyDescriptor['allowEmpty']) {
                                 // if values are different and dropdown has empty option then select
                                 // empty dropdown option
                                 value = '';
@@ -356,7 +356,7 @@ export default class PanelBase {
      */
     notifyEvent(obj, operation, field) {
         if (obj instanceof this.dataBaseClass && this.rb.isSelectedObject(obj.id) &&
-                operation === Command.operation.change) {
+            operation === Command.operation.change) {
             this.updateDisplay(field);
         }
     }
