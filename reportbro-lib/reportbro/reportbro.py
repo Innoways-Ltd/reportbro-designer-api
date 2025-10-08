@@ -672,6 +672,18 @@ class Report:
                     elem = SectionElement(self, doc_element, self.containers)
                 elif element_type == DocElementType.checkbox:
                     elem = CheckboxElement(self, doc_element)
+                elif element_type == DocElementType.watermark_text:
+                    elem = WatermarkTextElement(self, doc_element)
+                    # Watermarks are added directly to content band regardless of containerId
+                    if elem:
+                        self.content.add(elem)
+                        continue  # Skip the normal container logic
+                elif element_type == DocElementType.watermark_image:
+                    elem = WatermarkImageElement(self, doc_element)
+                    # Watermarks are added directly to content band regardless of containerId
+                    if elem:
+                        self.content.add(elem)
+                        continue  # Skip the normal container logic
 
                 if elem and container:
                     if container.is_visible():

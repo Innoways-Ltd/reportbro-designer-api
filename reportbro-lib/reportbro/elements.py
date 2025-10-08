@@ -2219,3 +2219,180 @@ class RichTextLine(object):
         # Add link if present
         if self.link:
             pdf_doc.link(render_x, y, self.width, self.base_style.font_size, self.link)
+
+
+class WatermarkTextBlockElement(TextBlockElement):
+    """Custom TextBlockElement for watermarks that handles rotation and opacity."""
+    
+    def __init__(self, report, x, y, render_y, width, height, text_offset_y,
+                 lines, render_element_type, style, rotate_deg=0, opacity=100):
+        super().__init__(report, x, y, render_y, width, height, text_offset_y,
+                         lines, render_element_type, style)
+        self.rotate_deg = rotate_deg
+        self.opacity = opacity
+    
+    def render_pdf(self, container_offset_x, container_offset_y, pdf_doc):
+        """Render text block with watermark rotation and opacity."""
+        # Convert opacity from 0-100 to 0-1 scale for FPDF
+        alpha = self.opacity / 100.0
+        
+        # Use local context to apply rotation and opacity
+        with pdf_doc.local_context(fill_opacity=alpha, stroke_opacity=alpha):
+            if self.rotate_deg != 0:
+                # Calculate rotation center (center of text block)
+                x = container_offset_x + self.x
+                y = container_offset_y + self.render_y
+                center_x = x + self.width / 2
+                center_y = y + self.height / 2
+                
+                # Negate the angle to make rotation clockwise (PDF default is counterclockwise)
+                clockwise_angle = -self.rotate_deg
+                
+                with pdf_doc.rotation(angle=clockwise_angle, x=center_x, y=center_y):
+                    super().render_pdf(container_offset_x, container_offset_y, pdf_doc)
+            else:
+                super().render_pdf(container_offset_x, container_offset_y, pdf_doc)
+
+
+class WatermarkTextElement(TextElement):
+    """Watermark text element that renders text as a watermark on the page background."""
+    
+    def __init__(self, report, data):
+        super().__init__(report, data)
+        # Watermark-specific properties with safe conversion
+        try:
+            rotate_value = data.get('rotateDeg', 0)
+            if rotate_value and str(rotate_value).strip():
+                self.rotate_deg = int(rotate_value)
+            else:
+                self.rotate_deg = 0
+        except (ValueError, TypeError):
+            self.rotate_deg = 0
+            
+        try:
+            opacity_value = data.get('opacity', 30)
+            if opacity_value and str(opacity_value).strip():
+                self.opacity = int(opacity_value)
+            else:
+                self.opacity = 30
+        except (ValueError, TypeError):
+            self.opacity = 30
+        
+        self.show_in_foreground = bool(data.get('showInForeground', False))
+        self.container_id = str(data.get('containerId', ''))
+    
+    def get_next_render_element(self, offset_y, container_top, container_width, container_height, ctx, pdf_doc):
+        """Override to create WatermarkTextBlockElement instead of regular TextBlockElement."""
+        # Call parent method to get the render element creation logic
+        result = super().get_next_render_element(offset_y, container_top, container_width, container_height, ctx, pdf_doc)
+        
+        if result[0] is not None:
+            # Replace the TextBlockElement with our WatermarkTextBlockElement
+            original_block = result[0]
+            watermark_block = WatermarkTextBlockElement(
+                self.report, 
+                x=original_block.x,
+                y=original_block.y, 
+                render_y=original_block.render_y,
+                width=original_block.width, 
+                height=original_block.height, 
+                text_offset_y=original_block.text_offset_y,
+                lines=original_block.lines, 
+                render_element_type=original_block.render_element_type, 
+                style=original_block.style,
+                rotate_deg=self.rotate_deg,
+                opacity=self.opacity
+            )
+            result = (watermark_block, result[1])
+        
+        return result
+    
+    def prepare(self, ctx, pdf_doc, only_verify=False):
+        """Prepare watermark text element for rendering."""
+        # Use text element preparation
+        super().prepare(ctx, pdf_doc, only_verify)
+    
+    def render_pdf(self, container_offset_x, container_offset_y, pdf_doc):
+        """Render watermark text with rotation and opacity."""
+        print("*"*100)
+        print("WATERMARK RENDER_PDF CALLED - THIS IS THE METHOD WE WANT!")
+        print("*"*100)
+        
+        if not self.is_printed(pdf_doc.context):
+            print("WATERMARK NOT PRINTED - EXITING")
+            return
+            
+        # SIMPLE TEST: If our method is called, change the text content
+        # This will help us verify if our render_pdf method is actually being invoked
+        if hasattr(self, 'text_lines') and self.text_lines:
+            for line in self.text_lines:
+                if hasattr(line, 'text') and hasattr(line.text, 'text'):
+                    # Modify the text to include rotation/opacity info as proof our method is called
+                    original_text = line.text.text
+                    line.text.text = f"{original_text} [R:{self.rotate_deg}° O:{self.opacity}%]"
+                    print(f"MODIFIED TEXT FROM '{original_text}' TO '{line.text.text}'")
+        
+        print("CALLING PARENT RENDER_PDF...")
+        # Call the parent render method
+        super().render_pdf(container_offset_x, container_offset_y, pdf_doc)
+        print("WATERMARK RENDER_PDF COMPLETE!")
+        print("*"*100)
+
+
+class WatermarkImageElement(ImageElement):
+    """Watermark image element that renders an image as a watermark on the page background."""
+    
+    def __init__(self, report, data):
+        super().__init__(report, data)
+        # Watermark-specific properties with safe conversion
+        try:
+            rotate_value = data.get('rotateDeg', 0)
+            if rotate_value and str(rotate_value).strip():
+                self.rotate_deg = int(rotate_value)
+            else:
+                self.rotate_deg = 0
+        except (ValueError, TypeError):
+            self.rotate_deg = 0
+            
+        try:
+            opacity_value = data.get('opacity', 30)
+            if opacity_value and str(opacity_value).strip():
+                self.opacity = int(opacity_value)
+            else:
+                self.opacity = 30
+        except (ValueError, TypeError):
+            self.opacity = 30
+            
+        self.show_in_foreground = bool(data.get('showInForeground', False))
+        self.container_id = str(data.get('containerId', ''))
+    
+    def prepare(self, ctx, pdf_doc, only_verify=False):
+        """Prepare watermark image element for rendering."""
+        # Use image element preparation
+        super().prepare(ctx, pdf_doc, only_verify)
+    
+    def render_pdf(self, container_offset_x, container_offset_y, pdf_doc):
+        """Render watermark image with rotation and opacity."""
+        if not self.is_printed(pdf_doc.context):
+            return
+            
+        # Convert opacity from 0-100 to 0-1 scale for FPDF
+        alpha = self.opacity / 100.0
+        
+        # Use local context to apply rotation and opacity without affecting other elements
+        with pdf_doc.local_context(fill_opacity=alpha, stroke_opacity=alpha):
+            if self.rotate_deg != 0:
+                # Calculate rotation center (center of image element)
+                # Get position after any container offsets
+                x = container_offset_x + self.x
+                y = container_offset_y + self.y
+                # Use element dimensions or fallback values if not set
+                width = getattr(self, 'width', 100)
+                height = getattr(self, 'height', 100)
+                center_x = x + width / 2
+                center_y = y + height / 2
+                
+                with pdf_doc.rotation(angle=self.rotate_deg, x=center_x, y=center_y):
+                    super().render_pdf(container_offset_x, container_offset_y, pdf_doc)
+            else:
+                super().render_pdf(container_offset_x, container_offset_y, pdf_doc)

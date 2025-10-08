@@ -571,6 +571,18 @@ def gen_file_from_report(
         # Process imageUrl fields and copy them to source field for external image support
         process_image_urls(report_definition, data)
 
+        # Merge watermarks into docElements if watermarks exist and watermark is enabled
+        if (report_definition.get("watermarks") and 
+            report_definition.get("documentProperties", {}).get("watermark", False)):
+            # Create a copy to avoid modifying the original
+            report_definition = report_definition.copy()
+            doc_elements = list(report_definition.get("docElements", []))
+            watermarks = report_definition.get("watermarks", [])
+            
+            # Add watermarks to docElements
+            doc_elements.extend(watermarks)
+            report_definition["docElements"] = doc_elements
+
         report = ReportPdf(report_definition, data, FONTS_LOADER, is_test_data)
     except (ReportBroError, ReportBroInternalError, ReportBroLibError) as ex:
         LOGGER.warning(
