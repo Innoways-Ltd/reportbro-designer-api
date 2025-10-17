@@ -6,6 +6,7 @@
 
 @desc: Settings
 """
+
 import os
 from functools import lru_cache
 from typing import List
@@ -37,12 +38,16 @@ class Settings(BaseSettings):
 
     ROOT_PATH: str = ""
     ROOT_PATH_IN_SERVERS: bool = True
-    
+
     # Proxy configuration for HTTPS handling
-    TRUST_PROXY_HEADERS: bool = bool(os.environ.get("TRUST_PROXY_HEADERS", "true") == "true")
+    TRUST_PROXY_HEADERS: bool = bool(
+        os.environ.get("TRUST_PROXY_HEADERS", "true") == "true"
+    )
     FORCE_HTTPS: bool = bool(os.environ.get("FORCE_HTTPS", "false") == "true")
-    HTTPS_DOMAINS: list = os.environ.get("HTTPS_DOMAINS", "siia.group,zmallplanet.com,a4apple.cn,hkieerb.org").split(",")
-    
+    HTTPS_DOMAINS: list = os.environ.get(
+        "HTTPS_DOMAINS", "siia.group,zmallplanet.com,a4apple.cn,hkieerb.org"
+    ).split(",")
+
     # CORS configuration
     CORS_ALLOW_ORIGINS: list = os.environ.get("CORS_ALLOW_ORIGINS", "*").split(",")
 
@@ -54,8 +59,13 @@ class Settings(BaseSettings):
     # sqlite+aiosqlite:///./reportbro.db
     # mysql+aiomysql://root:root@localhost/reportbro
     # postgresql+asyncpg://postgres:postgres@localhost:5432/reportbro
-    DB_URL: str = os.environ.get("DB_URL", "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro")
-    STORAGE_URL: str = os.environ.get("STORAGE_URL", "s3://minioadmin:minioadmin@127.0.0.1:9000/reportbro")
+    DB_URL: str = os.environ.get(
+        "DB_URL", "s3://zmtsHwfqwAUQf6ux:82ac6CMZRSCw4dh3@minio-service:9000/reportbro"
+    )
+    STORAGE_URL: str = os.environ.get(
+        "STORAGE_URL",
+        "s3://zmtsHwfqwAUQf6ux:82ac6CMZRSCw4dh3@minio-service:9000/reportbro",
+    )
 
     @property
     def db_url_mark(self):
