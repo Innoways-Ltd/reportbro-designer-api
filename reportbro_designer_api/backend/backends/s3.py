@@ -126,14 +126,27 @@ class S3BackendClient:
     def __conv_dict(cls, obj, head):
         """Get Body."""
         assert "/" in obj.get("Key", "")
-        return sa.TemplateInfo(
-            **{
-                "tid": str(obj.get("Key", "")).rsplit("/", maxsplit=1)[-1],
-                "version_id": obj.get("VersionId", "") or head["VersionId"],
-                "updated_at": head["LastModified"],
-                **cls.decode_matedata(dict(head["Metadata"])),
-            }
-        )
+        
+        raw_metadata = dict(head["Metadata"])
+        decoded_metadata = cls.decode_matedata(raw_metadata)
+        
+        template_data = {
+            "tid": str(obj.get("Key", "")).rsplit("/", maxsplit=1)[-1],
+            "version_id": obj.get("VersionId", "") or head["VersionId"],
+            "updated_at": head["LastModified"],
+            **decoded_metadata,
+        }
+        
+        # Handle missing required fields gracefully
+        if "template_name" not in template_data:
+            # Generate a readable name based on the template ID
+            template_data["template_name"] = f"Template {template_data['tid'][:8]}"
+        
+        if "template_type" not in template_data:
+            # Set a default type for templates with missing metadata
+            template_data["template_type"] = "unknown"
+        
+        return sa.TemplateInfo(**template_data)
 
     async def _get_templates_version_list(
         self,
@@ -229,15 +242,27 @@ class S3BackendClient:
             if not body and self.default_template:
                 body = self.default_template
 
-            return sa.TemplateConfigInfo(
-                **{
-                    "tid": tid,
-                    "version_id": res["VersionId"],
-                    "updated_at": res["LastModified"],
-                    **self.decode_matedata(res["Metadata"]),
-                    "report": body,
-                }
-            )
+            # Decode metadata and handle missing required fields
+            decoded_metadata = self.decode_matedata(res["Metadata"])
+            
+            template_data = {
+                "tid": tid,
+                "version_id": res["VersionId"],
+                "updated_at": res["LastModified"],
+                "report": body,
+                **decoded_metadata,
+            }
+            
+            # Handle missing required fields gracefully
+            if "template_name" not in template_data:
+                # Generate a readable name based on the template ID
+                template_data["template_name"] = f"Template {tid[:8]}"
+            
+            if "template_type" not in template_data:
+                # Set a default type for templates with missing metadata
+                template_data["template_type"] = "unknown"
+
+            return sa.TemplateConfigInfo(**template_data)
 
     @hook_create_bucket_when_not_exist()
     async def _delete_template(
