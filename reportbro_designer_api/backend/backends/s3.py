@@ -284,15 +284,18 @@ class S3BackendClient:
                     )
                 ]
 
-            await client.delete_objects(
-                Bucket=self.bucket_name,
-                Delete={
-                    "Objects": [
-                        {"Key": object_key, "VersionId": version_id}
-                        for object_key, version_id in delete_list
-                    ],
-                },
-            )
+            # Only call delete_objects if there are objects to delete
+            # AWS S3 requires at least one object in the Objects array
+            if delete_list:
+                await client.delete_objects(
+                    Bucket=self.bucket_name,
+                    Delete={
+                        "Objects": [
+                            {"Key": object_key, "VersionId": version_id}
+                            for object_key, version_id in delete_list
+                        ],
+                    },
+                )
 
 
 class S3Backend(S3BackendClient, BackendBase):

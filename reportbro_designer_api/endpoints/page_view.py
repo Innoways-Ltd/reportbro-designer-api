@@ -30,6 +30,7 @@ from ..backend.backends.base import BackendBase
 from ..clients import FONTS_LOADER
 from ..clients import get_meth_cli
 from ..clients import get_default_report_cli
+from ..dependencies import get_company_context, get_company_backend
 from ..errors import TemplageNotFoundError
 
 router = APIRouter()
@@ -45,7 +46,8 @@ templates.env.install_gettext_translations(translation)  # pylint: disable=no-me
 @router.get("/templates", tags=TAGS, name="Templates Manage page")
 async def templates_index_page():
     """Templates Manage page."""
-    return RedirectResponse("/templates")
+    return RedirectResponse("/ui")
+
 
 @router.get("/designer/{tid}", tags=TAGS, name="Templates Designer page")
 async def templates_designer_page(
@@ -60,7 +62,8 @@ async def templates_designer_page(
         alias="locale",
         pattern=r"^(zh_cn|de_de|en_us)$",
     ),
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Templates Designer page."""
     obj = await client.get_template(tid, version_id)
@@ -80,6 +83,7 @@ async def templates_designer_page(
             "menu_sidebar": menu_sidebar,
             "menu_show_debug": menu_show_debug,
             "locale": locale,
+            "company": company,
         },
     )
 @router.get("/designer", tags=TAGS, name="Templates Designer page")
@@ -128,5 +132,6 @@ async def templates_designer_page_no_tid(
             "menu_sidebar": menu_sidebar,
             "menu_show_debug": menu_show_debug,
             "locale": locale,
+            "company": "default",
         },
     )

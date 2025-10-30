@@ -402,7 +402,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     apiTemplatesListGet: (params: RequestParams = {}) =>
       this.request<TemplateListResponse, any>({
-        path: `/api/templates/list`,
+        path: `/templates/list`,
         method: "GET",
         format: "json",
         ...params,
@@ -418,7 +418,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     apiTemplatesTidVersionsGet: (tid: string, params: RequestParams = {}) =>
       this.request<TemplateListResponse, HTTPValidationError>({
-        path: `/api/templates/${tid}/versions`,
+        path: `/templates/${tid}/versions`,
         method: "GET",
         format: "json",
         ...params,
@@ -441,7 +441,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<TemplateDescResponse, HTTPValidationError>({
-        path: `/api/templates/${tid}/desc`,
+        path: `/templates/${tid}/desc`,
         method: "GET",
         query: query,
         format: "json",
@@ -458,7 +458,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     apiTemplatesPut: (data: RequestCreateTemplate, params: RequestParams = {}) =>
       this.request<TemplateDataResponse, HTTPValidationError>({
-        path: `/api/templates`,
+        path: `/templates`,
         method: "PUT",
         body: data,
         type: ContentType.Json,
@@ -476,7 +476,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     apiTemplatesTidPut: (tid: string, data: RequestCreateTemplate, params: RequestParams = {}) =>
       this.request<TemplateDataResponse, HTTPValidationError>({
-        path: `/api/templates/${tid}`,
+        path: `/templates/${tid}`,
         method: "PUT",
         body: data,
         type: ContentType.Json,
@@ -494,7 +494,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     apiTemplatesTidPost: (tid: string, data: RequestUploadTemplate, params: RequestParams = {}) =>
       this.request<TemplateDataResponse, HTTPValidationError>({
-        path: `/api/templates/${tid}`,
+        path: `/templates/${tid}`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -519,7 +519,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<ErrorResponse, HTTPValidationError>({
-        path: `/api/templates/${tid}`,
+        path: `/templates/${tid}`,
         method: "DELETE",
         query: query,
         format: "json",
@@ -536,7 +536,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     apiTemplatesTidClonePost: (tid: string, data: RequestCloneTemplate, params: RequestParams = {}) =>
       this.request<TemplateDataResponse, HTTPValidationError>({
-        path: `/api/templates/${tid}/clone`,
+        path: `/templates/${tid}/clone`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -564,7 +564,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<any, HTTPValidationError>({
-        path: `/api/templates/review/generate`,
+        path: `/templates/review/generate`,
         method: "PUT",
         query: query,
         body: data,
@@ -598,7 +598,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<any, HTTPValidationError>({
-        path: `/api/templates/review/generate`,
+        path: `/templates/review/generate`,
         method: "GET",
         query: query,
         format: "json",
@@ -625,7 +625,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<TemplateDownLoadResponse, HTTPValidationError>({
-        path: `/api/templates/multi/generate`,
+        path: `/templates/multi/generate`,
         method: "PUT",
         query: query,
         body: data,
@@ -653,7 +653,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<any, HTTPValidationError>({
-        path: `/api/templates/multi/generate`,
+        path: `/templates/multi/generate`,
         method: "GET",
         query: query,
         format: "json",
@@ -683,7 +683,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<TemplateDownLoadResponse, HTTPValidationError>({
-        path: `/api/templates/${tid}/generate`,
+        path: `/templates/${tid}/generate`,
         method: "PUT",
         query: query,
         body: data,
@@ -718,7 +718,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<any, HTTPValidationError>({
-        path: `/api/templates/${tid}/generate`,
+        path: `/templates/${tid}/generate`,
         method: "GET",
         query: query,
         format: "json",

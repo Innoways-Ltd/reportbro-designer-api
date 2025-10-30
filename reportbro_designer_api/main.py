@@ -1,3 +1,4 @@
+ 
 # -*- coding: utf-8 -*-
 """
 @create: 2022-07-22 17:42:41.
@@ -14,12 +15,14 @@ from contextlib import asynccontextmanager
 
 from botocore.exceptions import ClientError
 from fastapi import FastAPI
+from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
 from fastapi.requests import Request
 from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
 from fastapi.responses import JSONResponse
 from fastapi.responses import PlainTextResponse
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import URL
@@ -41,6 +44,7 @@ from .router import router
 from .settings import settings
 from .utils.logger import LOGGER
 from .utils.model import ErrorResponse
+from .utils.static_files import UiStaticFiles
 from .version import __VERSION__
 
 
@@ -88,54 +92,11 @@ class TrustProxyHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-class UiStaticFiles(StaticFiles):
-    """UiStaticFiles."""
-
-    FILE_PATH_REGIX = re.compile(r'(href|src)="\/ui\/(.*?)"')
-    FILE_JS_PATH_REGIX = re.compile(r"index-(.*?).js$")
-    FILE_JS_API_REGIX = re.compile(r'="/api",')
-
-    async def get_response(self, path: str, scope):
-        """get_response."""
-        response = await super().get_response(path, scope)
-        
-        if isinstance(response, FileResponse) and isinstance(response.path, str):
-            # Get the scheme from scope (should be set by TrustProxyHeadersMiddleware)
-            scheme = scope.get("scheme", "http")
-            
-            # Get host from headers
-            headers = dict(scope.get("headers", []))
-            host = headers.get(b"host", b"localhost").decode()
-            
-            if len(self.FILE_JS_PATH_REGIX.findall(response.path)) > 0:
-                with open(response.path, "r", encoding="utf8") as fs:
-                    content = fs.read()
-
-                root_path = scope.get("root_path", "")
-                app_root_path = scope.get("app_root_path", scope.get("root_path", ""))
-                
-                content = content.replace(
-                    'path:"/ui",', f'path:"{root_path}",'
-                )
-                content = self.FILE_JS_API_REGIX.sub(
-                    f'="{app_root_path}",', content
-                )
-                return PlainTextResponse(content=content, media_type="text/javascript")
-
-            if response.path.endswith("index.html"):
-                with open(response.path, "r", encoding="utf8") as fs:
-                    content = fs.read()
-
-                # Construct base URL with correct scheme
-                base_url = f"{scheme}://{host}"
-                
-                # Replace relative paths with absolute URLs using the correct scheme
-                content = self.FILE_PATH_REGIX.sub(f'\\1="{base_url}/ui/\\2"', content)
-                return HTMLResponse(content=content)
-        return response
-
-
 def get_app() -> FastAPI:
+    # ...existing code...
+
+    # ...existing code...
+
     """Fastapi app."""
 
     def print_var():
@@ -199,10 +160,106 @@ def get_app() -> FastAPI:
         allow_headers=["*"],  # Allow all headers
     )
     
+    # Create a separate router for company-specific UI routes
+    company_ui_router = APIRouter()
+    
+    @company_ui_router.get("", name="Default UI Index")
+    async def default_ui_index(
+        request: Request,
+    ):
+        """Serve default UI index page (legacy route without company)."""
+        import os
+        
+        index_path = os.path.join(settings.STATIC_PATH, "ui", "index.html")
+        
+        try:
+            with open(index_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # Get the scheme and host for absolute URLs
+            scheme = request.url.scheme
+            host = request.headers.get("host", "localhost")
+            base_url = f"{scheme}://{host}"
+            
+            # Replace relative asset paths for legacy route
+            content = content.replace('href="./assets/', f'href="{base_url}/ui/assets/')
+            content = content.replace('src="./assets/', f'src="{base_url}/ui/assets/')
+            
+            return HTMLResponse(content=content)
+            
+        except Exception as e:
+            raise HTTPException(status_code=404, detail="UI not found")
+    
+    @company_ui_router.get("/{company}", name="Company UI Index")
+    async def company_ui_index(
+        request: Request,
+        company: str,
+    ):
+        """Serve company-specific UI index page."""
+        # Read and modify the index.html manually to update asset paths
+        import os
+        
+        index_path = os.path.join(settings.STATIC_PATH, "ui", "index.html")
+        
+        try:
+            with open(index_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # Get the scheme and host for absolute URLs
+            scheme = request.url.scheme
+            host = request.headers.get("host", "localhost")
+            base_url = f"{scheme}://{host}"
+            
+            # Replace relative asset paths to point to company-specific routes
+            # Replace ./assets/ with absolute paths
+            content = content.replace('href="./assets/', f'href="{base_url}/ui/{company}/assets/')
+            content = content.replace('src="./assets/', f'src="{base_url}/ui/{company}/assets/')
+            # Also replace /ui/ patterns
+            content = content.replace('href="/ui/', f'href="{base_url}/ui/{company}/')
+            content = content.replace('src="/ui/', f'src="{base_url}/ui/{company}/')
+            
+            return HTMLResponse(content=content)
+            
+        except Exception as e:
+            raise HTTPException(status_code=404, detail="UI not found")
+    
+    @company_ui_router.get("/{company}/assets/{filename}", name="Company UI Assets")
+    async def company_ui_assets(
+        request: Request,
+        company: str,
+        filename: str,
+    ):
+        """Serve company-specific UI assets with modified API paths."""
+        # Create a UiStaticFiles instance
+        ui_static = UiStaticFiles(
+            directory=os.path.join(settings.STATIC_PATH, "ui"),
+            html=True
+        )
+        
+        # Create a modified scope that includes company context
+        scope = dict(request.scope)
+        scope["company"] = company
+        scope["app_root_path"] = f"/{company}"  # This replaces path:"/api" with path:"/{company}", so frontend builds /api/{company}/...
+        scope["root_path"] = f"/ui/{company}"  # This will be used for UI paths
+        
+        asset_path = f"assets/{filename}"
+        
+        try:
+            response = await ui_static.get_response(asset_path, scope)
+            return response
+        except Exception as e:
+            # If asset not found, return 404
+            raise HTTPException(status_code=404, detail="Asset not found")
+    
+    # Include company UI router before mounting static files
+    rapp.include_router(company_ui_router, prefix="/ui")
+    
+    # Mount static files for default UI assets (without company prefix)
+    # This needs to be before /ui/{company} to avoid conflicts
     rapp.mount(
-        "/ui/",
-        UiStaticFiles(directory=os.path.join(settings.STATIC_PATH, "ui"), html=True),
-        name="Ui Page",
+        "/ui/assets",
+        StaticFiles(directory=os.path.join(settings.STATIC_PATH, "ui", "assets")),
+        name="UiAssets",
     )
     rapp.mount("/static", StaticFiles(directory=settings.STATIC_PATH), name="static")
     rapp.include_router(router)
@@ -299,4 +356,39 @@ def get_app() -> FastAPI:
     return rapp
 
 
+
+
+
+
 app = get_app()
+
+# Serve /ui by rendering index.html with company set to 'default'
+@app.get("/ui", name="Root UI", include_in_schema=False)
+async def root_ui_index(request):
+    static_path = os.path.join(settings.STATIC_PATH, "ui", "index.html")
+    if not os.path.exists(static_path):
+        raise HTTPException(status_code=404, detail="UI not found")
+    with open(static_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("host", "localhost")
+    base_url = f"{scheme}://{host}"
+    # Rewrite asset paths for JS/CSS
+    content = re.sub(r'href="/ui/(assets/.*?\.css)"', f'href="{base_url}/ui/assets/\\1"', content)
+    content = re.sub(r'src="/ui/(assets/.*?\.js)"', f'src="{base_url}/ui/assets/\\1"', content)
+    # Rewrite API path in JS to use /default
+    content = content.replace('path:"/api', 'path:"/default/api')
+    return HTMLResponse(content=content)
+
+# Catch-all route for SPA routing (must be after assets and favicon routes)
+
+
+# Serve /ui/vite.svg favicon at module level
+
+
+@app.get("/ui/vite.svg", include_in_schema=False)
+async def ui_favicon():
+    favicon_path = os.path.join(settings.STATIC_PATH, "ui", "vite.svg")
+    if not os.path.exists(favicon_path):
+        raise HTTPException(status_code=404, detail="Favicon not found")
+    return FileResponse(favicon_path, media_type="image/svg+xml")

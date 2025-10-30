@@ -15,6 +15,7 @@
 var tid = "{{ tid|safe }}";
 var version_id = "{{ version_id|safe }}";
 var is_default = {{ is_default|default(false)|tojson }};
+var company = "{{ company|safe }}";
 var template_name = "";
 var template_type = "";
 var rb; // Declare rb as global variable
@@ -30,7 +31,15 @@ function saveReport() {
         version_id = "?version_id=" + version_id;
     }
 
-    $.ajax("{{ url_for('Save Templates', tid=tid) }}" + version_id, {
+    // Build the save URL with company prefix if company is set and not "default"
+    var saveUrl = "";
+    if (company && company !== "default") {
+        saveUrl = "/api/" + company + "/templates/" + tid + version_id;
+    } else {
+        saveUrl = "{{ url_for('Save Templates', tid=tid) }}" + version_id;
+    }
+
+    $.ajax(saveUrl, {
         data: JSON.stringify({
             "report": report,
             "template_name": template_name,
@@ -51,8 +60,16 @@ function saveReport() {
 }
 
 const report = {{ report|safe }};
+// Build the preview URL with company prefix if company is set and not "default"
+var reportServerUrl = "";
+if (company && company !== "default") {
+    reportServerUrl = "/api/" + company + "/templates/review/generate";
+} else {
+    reportServerUrl = "{{ url_for('Generate preview file from template') }}";
+}
+
 rb = new ReportBro(document.getElementById('reportbro'), {
-    reportServerUrl: '{{ url_for('Generate preview file from template') }}',
+    reportServerUrl: reportServerUrl,
     menuSidebar: {{ 'true' if menu_sidebar else 'false' }},
     localeKey: "{{ locale }}",
     saveCallback: saveReport,

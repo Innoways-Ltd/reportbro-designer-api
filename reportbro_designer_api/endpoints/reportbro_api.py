@@ -51,6 +51,7 @@ from ..clients import FONTS_LOADER
 from ..clients import StorageMange
 from ..clients import get_meth_cli
 from ..clients import get_storage_mange
+from ..dependencies import get_company_context, get_company_backend, get_company_storage
 from ..errors import TemplageNotFoundError
 from ..settings import settings
 from ..utils.logger import LOGGER
@@ -85,6 +86,30 @@ GEN_TAGS: List[Union[str, Enum]] = ["ReportBro Generate Api"]
 # templates = Jinja2Templates(directory=settings.TEMPLATES_PATH)
 
 
+def get_designer_page_url(request: Request, company: Optional[str], tid: str) -> str:
+    """Generate the correct designer page URL based on company context."""
+    if company and company != "default":
+        # Use company-specific route
+        return str(request.url_for("Company Templates Designer page", company=company, tid=tid))
+    else:
+        # Use legacy route for backward compatibility
+        return str(request.url_for("Templates Designer page", tid=tid))
+
+
+def get_download_url(request: Request, company: Optional[str], route_name: str, **kwargs) -> str:
+    """Generate the correct download URL based on company context."""
+    # For company-specific routes, the route name is registered with company prefix
+    # The url_for will work with both legacy and company-specific routes
+    url = str(request.url_for(route_name, **kwargs))
+    
+    # If company is provided and not default, we need to ensure the URL includes the company prefix
+    if company and company != "default":
+        # Replace /api/ with /api/{company}/
+        url = url.replace("/api/", f"/api/{company}/", 1)
+    
+    return url
+
+
 def is_pdf(data: bytes):
     """is_pdf."""
     rtype = filetype.guess(data)
@@ -99,7 +124,8 @@ def is_pdf(data: bytes):
 )
 async def main_index_page(
     request: Request,
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Get templates List."""
     list_ = await client.get_templates_list(limit=settings.PAGE_LIMIT)
@@ -110,9 +136,7 @@ async def main_index_page(
             TemplateListData(
                 **{
                     **i.__dict__,
-                    "template_designer_page": str(
-                        request.url_for("Templates Designer page", tid=i.tid)
-                    ),
+                    "template_designer_page": get_designer_page_url(request, company, i.tid),
                 }
             )
             for i in list_
@@ -129,7 +153,8 @@ async def main_index_page(
 async def copy_templates(
     request: Request,
     req: RequestCopyTemplate,
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Copy Templates to a new template with a new name."""
     # Get the source template
@@ -164,9 +189,7 @@ async def copy_templates(
                 template_type=new_template_type,
                 tid=rrr.tid,
                 version_id=rrr.version_id,
-                template_designer_page=str(
-                    request.url_for("Templates Designer page", tid=rrr.tid)
-                ),
+                template_designer_page=get_designer_page_url(request, company, rrr.tid),
             ),
         )
     except HTTPException as ex:
@@ -183,7 +206,8 @@ async def copy_templates(
 async def get_versions(
     request: Request,
     tid: str = Path(title="Template id"),
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Get templates List."""
     list_ = await client.get_templates_version_list(tid)
@@ -194,9 +218,7 @@ async def get_versions(
             TemplateListData(
                 **{
                     **i.__dict__,
-                    "template_designer_page": str(
-                        request.url_for("Templates Designer page", tid=i.tid)
-                    ),
+                    "template_designer_page": get_designer_page_url(request, company, i.tid),
                 }
             )
             for i in list_
@@ -216,7 +238,8 @@ async def get_templates_data(
     version_id: Optional[str] = Query(
         None, title="Template version id", alias="versionId"
     ),
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Get templates List."""
     template = await client.get_template(tid, version_id)
@@ -230,9 +253,7 @@ async def get_templates_data(
             **{
                 **template.dict(),
                 "report": template.report,
-                "template_designer_page": str(
-                    request.url_for("Templates Designer page", tid=template.tid)
-                ),
+                "template_designer_page": get_designer_page_url(request, company, template.tid),
             }
         ),
     )
@@ -247,7 +268,8 @@ async def get_templates_data(
 async def create_templates(
     request: Request,
     req: RequestCreateTemplate,
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Templates Manage page."""
     try:
@@ -261,9 +283,7 @@ async def create_templates(
                 template_type=req.template_type,
                 tid=rrr.tid,
                 version_id=rrr.version_id,
-                template_designer_page=str(
-                    request.url_for("Templates Designer page", tid=rrr.tid)
-                ),
+                template_designer_page=get_designer_page_url(request, company, rrr.tid),
             ),
         )
     except HTTPException as ex:
@@ -281,7 +301,8 @@ async def create_templates_tid(
     request: Request,
     req: RequestCreateTemplate,
     tid: str = Path(title="Template id"),
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Templates Manage page."""
     try:
@@ -295,9 +316,7 @@ async def create_templates_tid(
                 template_type=req.template_type,
                 tid=rrr.tid,
                 version_id=rrr.version_id,
-                template_designer_page=str(
-                    request.url_for("Templates Designer page", tid=rrr.tid)
-                ),
+                template_designer_page=get_designer_page_url(request, company, rrr.tid),
             ),
         )
     except HTTPException as ex:
@@ -314,7 +333,8 @@ async def create_templates_tid(
 async def import_template(
     request: Request,
     req: RequestImportTemplate,
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Import Template from JSON data."""
     if not req.template_data:
@@ -368,9 +388,7 @@ async def import_template(
                 template_type=req.template_type,
                 tid=rrr.tid,
                 version_id=rrr.version_id,
-                template_designer_page=str(
-                    request.url_for("Templates Designer page", tid=rrr.tid)
-                ),
+                template_designer_page=get_designer_page_url(request, company, rrr.tid),
             ),
         )
     except HTTPException as ex:
@@ -388,7 +406,8 @@ async def save_templates(
     request: Request,
     req: RequestUploadTemplate,
     tid: str = Path(title="Template id"),
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Save Templates with optional metadata update."""
     if not req.report:
@@ -425,9 +444,7 @@ async def save_templates(
                 template_type=template_type,
                 tid=tid,
                 version_id=rrr.version_id,
-                template_designer_page=str(
-                    request.url_for("Templates Designer page", tid=rrr.tid)
-                ),
+                template_designer_page=get_designer_page_url(request, company, rrr.tid),
             ),
         )
     except HTTPException as ex:
@@ -445,7 +462,8 @@ async def clone_templates(
     request: Request,
     req: RequestCloneTemplate,
     tid: str = Path(title="Template id"),
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Clone Templates."""
     obj = await client.get_template(req.from_tid, req.from_version_id)
@@ -481,9 +499,7 @@ async def clone_templates(
                 template_type=obj_src.template_type,
                 tid=tid,
                 version_id=rrr.version_id,
-                template_designer_page=str(
-                    request.url_for("Templates Designer page", tid=rrr.tid)
-                ),
+                template_designer_page=get_designer_page_url(request, company, rrr.tid),
             ),
         )
     except HTTPException as ex:
@@ -502,7 +518,8 @@ async def delete_templates(
     version_id: Optional[str] = Query(
         None, title="Template version id", alias="versionId"
     ),
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Delete Templates."""
     await client.delete_template(tid, version_id)
@@ -524,7 +541,8 @@ async def export_template(
     version_id: Optional[str] = Query(
         None, title="Template version id", alias="versionId"
     ),
-    client: BackendBase = Depends(get_meth_cli),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
 ):
     """Export Template as JSON data."""
     template = await client.get_template(tid, version_id)
@@ -683,7 +701,8 @@ async def review_templates_gen(
     disabled_fill: bool = Query(
         default=False, title="Disable fill empty fields for input data"
     ),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Review Templates Generate."""
     filename, report_file = gen_file_from_report(
@@ -704,7 +723,8 @@ async def review_templates(
         "pdf", title="Output Format(pdf|xlsx)", pattern=r"^(pdf|xlsx)$"
     ),
     key: str = Query(title="File Key", min_length=16),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Review Templates."""
     r = await read_file_in_s3(output_format, key, storage)
@@ -724,7 +744,8 @@ async def review_templates_gen_download(
     disabled_fill: bool = Query(
         default=False, title="Disable fill empty fields for input data"
     ),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Review Templates Generate."""
     filename, report_file = gen_file_from_report(
@@ -732,20 +753,15 @@ async def review_templates_gen_download(
     )
     assert report_file
     download_key = await storage.put_file(filename, report_file, background_tasks)
+    base_download_url = get_download_url(
+        request, company, "Get generate file from multiple template"
+    )
     return TemplateDownLoadResponse(
         code=HTTP_200_OK,
         error="ok",
         data=TemplateDownLoadData(
             download_key=download_key,
-            download_url=str(
-                request.url_for("Get generate file from multiple template")
-            )
-            + "?"
-            + urlencode(
-                {
-                    "key": download_key,
-                }
-            ),
+            download_url=base_download_url + "?" + urlencode({"key": download_key}),
         ),
     )
 
@@ -837,8 +853,9 @@ async def generate_templates_multi_gen(
     disabled_fill: bool = Query(
         default=False, title="Disable fill empty fields for input data"
     ),
-    client: BackendBase = Depends(get_meth_cli),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Review Templates Generate."""
     if not req.templates:
@@ -915,20 +932,15 @@ async def generate_templates_multi_gen(
     rrr.seek(0)
 
     download_key = await storage.put_file(filename, rrr.read(), background_tasks)
+    base_download_url = get_download_url(
+        request, company, "Get generate file from multiple template"
+    )
     return TemplateDownLoadResponse(
         code=HTTP_200_OK,
         error="ok",
         data=TemplateDownLoadData(
             download_key=download_key,
-            download_url=str(
-                request.url_for("Get generate file from multiple template")
-            )
-            + "?"
-            + urlencode(
-                {
-                    "key": download_key,
-                }
-            ),
+            download_url=base_download_url + "?" + urlencode({"key": download_key}),
         ),
     )
 
@@ -940,7 +952,8 @@ async def generate_templates_multi_gen(
 )
 async def generate_templates_multi(
     key: str = Query(title="File Key", min_length=16),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Review Templates."""
     r = await read_file_in_s3("pdf", key, storage)
@@ -969,8 +982,9 @@ async def generate_templates_gen(
     disabled_fill: bool = Query(
         default=False, title="Disable fill empty fields for input data"
     ),
-    client: BackendBase = Depends(get_meth_cli),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Review Templates Generate."""
     templage = await client.get_template(tid, version_id)
@@ -982,18 +996,15 @@ async def generate_templates_gen(
     )
     assert report_file
     download_key = await storage.put_file(filename, report_file, background_tasks)
+    base_download_url = get_download_url(
+        request, company, "Get generate file", tid=tid
+    )
     return TemplateDownLoadResponse(
         code=HTTP_200_OK,
         error="ok",
         data=TemplateDownLoadData(
             download_key=download_key,
-            download_url=str(request.url_for("Get generate file", tid=tid))
-            + "?"
-            + urlencode(
-                {
-                    "key": download_key,
-                }
-            ),
+            download_url=base_download_url + "?" + urlencode({"key": download_key}),
         ),
     )
 
@@ -1008,7 +1019,8 @@ async def generate_templates(
         "pdf", title="Output Format(pdf|xlsx)", pattern=r"^(pdf|xlsx)$"
     ),
     key: str = Query(title="File Key", min_length=16),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Review Templates."""
     r = await read_file_in_s3(output_format, key, storage)
@@ -1032,8 +1044,9 @@ async def generate_templates_by_name_gen(
     disabled_fill: bool = Query(
         default=False, title="Disable fill empty fields for input data"
     ),
-    client: BackendBase = Depends(get_meth_cli),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    client: BackendBase = Depends(get_company_backend),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Generate template file by template name."""
     LOGGER.info(f"Looking for template with name: '{template_name}'")
@@ -1072,18 +1085,15 @@ async def generate_templates_by_name_gen(
     )
     assert report_file
     download_key = await storage.put_file(filename, report_file, background_tasks)
+    base_download_url = get_download_url(
+        request, company, "Get generate file by name", template_name=template_name
+    )
     return TemplateDownLoadResponse(
         code=HTTP_200_OK,
         error="ok",
         data=TemplateDownLoadData(
             download_key=download_key,
-            download_url=str(request.url_for("Get generate file by name", template_name=template_name))
-            + "?"
-            + urlencode(
-                {
-                    "key": download_key,
-                }
-            ),
+            download_url=base_download_url + "?" + urlencode({"key": download_key}),
         ),
     )
 
@@ -1098,7 +1108,8 @@ async def generate_templates_by_name(
         "pdf", title="Output Format(pdf|xlsx)", pattern=r"^(pdf|xlsx)$"
     ),
     key: str = Query(title="File Key", min_length=16),
-    storage: StorageMange = Depends(get_storage_mange),
+    company: str = Depends(get_company_context),
+    storage: StorageMange = Depends(get_company_storage),
 ):
     """Get generated file by template name."""
     r = await read_file_in_s3(output_format, key, storage)
