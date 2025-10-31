@@ -83,10 +83,10 @@ export default class Document {
         elDocTabs.append(this.elTabPdfLayout);
         this.elTabPdfPreview = utils.createElement(
             'div', {
-                id: 'rbro_document_tab_pdf_preview',
-                class: 'rbroDocumentTab rbroButton rbroTabButton rbroHidden rbroPdfPreview' +
-                    (this.rb.getProperty('enableSpreadsheet') ? ' rbroXlsxDownload' : '')
-            },
+            id: 'rbro_document_tab_pdf_preview',
+            class: 'rbroDocumentTab rbroButton rbroTabButton rbroHidden rbroPdfPreview' +
+                (this.rb.getProperty('enableSpreadsheet') ? ' rbroXlsxDownload' : '')
+        },
             this.rb.getLabel('documentTabPdfPreview'));
         this.elTabPdfPreview.addEventListener('click', (event) => {
             this.setDocumentTab(Document.tab.pdfPreview);
@@ -94,9 +94,9 @@ export default class Document {
         if (this.rb.getProperty('enableSpreadsheet')) {
             const elButtonXlsxDownload = utils.createElement(
                 'span', {
-                    class: 'rbroIcon-xlsx rbroXlsxDownloadButton',
-                    title: this.rb.getLabel('documentTabXlsxDownload')
-                });
+                class: 'rbroIcon-xlsx rbroXlsxDownloadButton',
+                title: this.rb.getLabel('documentTabXlsxDownload')
+            });
             elButtonXlsxDownload.addEventListener('click', (event) => {
                 this.rb.downloadSpreadsheet();
             });
@@ -104,9 +104,9 @@ export default class Document {
         }
         const elClosePdfPreview = utils.createElement(
             'span', {
-                class: 'rbroIcon-cancel',
-                title: this.rb.getLabel('documentTabClose')
-            });
+            class: 'rbroIcon-cancel',
+            title: this.rb.getLabel('documentTabClose')
+        });
         elClosePdfPreview.addEventListener('click', (event) => {
             this.closePdfPreviewTab();
         });
@@ -119,32 +119,32 @@ export default class Document {
             'div', { id: 'rbro_document_pdf', class: 'rbroDocument rbroDragTarget rbroHidden' });
         this.elDocContent = utils.createElement(
             'div', {
-                id: 'rbro_document_content',
-                class: 'rbroDocumentContent' + (this.gridVisible ? ' rbroDocumentGrid' : '')
-            });
+            id: 'rbro_document_content',
+            class: 'rbroDocumentContent' + (this.gridVisible ? ' rbroDocumentGrid' : '')
+        });
         this.elHeader = utils.createElement(
             'div', {
-                id: 'rbro_header',
-                class: 'rbroDocumentBand rbroElementContainer',
-                style: 'top: 0px; left: 0px;'
-            });
+            id: 'rbro_header',
+            class: 'rbroDocumentBand rbroElementContainer',
+            style: 'top: 0px; left: 0px;'
+        });
         this.elHeader.append(
             utils.createElement('div', { class: 'rbroDocumentBandDescription' }, this.rb.getLabel('bandHeader')));
         this.elDocContent.append(this.elHeader);
         this.elContent = utils.createElement(
             'div', {
-                id: 'rbro_content',
-                class: 'rbroDocumentBand rbroElementContainer'
-            });
+            id: 'rbro_content',
+            class: 'rbroDocumentBand rbroElementContainer'
+        });
         this.elContent.append(
             utils.createElement('div', { class: 'rbroDocumentBandDescription' }, this.rb.getLabel('bandContent')));
         this.elDocContent.append(this.elContent);
         this.elFooter = utils.createElement(
             'div', {
-                id: 'rbro_footer',
-                class: 'rbroDocumentBand rbroElementContainer',
-                style: 'bottom: 0px; left 0px;'
-            });
+            id: 'rbro_footer',
+            class: 'rbroDocumentBand rbroElementContainer',
+            style: 'bottom: 0px; left 0px;'
+        });
         this.elFooter.append(
             utils.createElement('div', { class: 'rbroDocumentBandDescription' }, this.rb.getLabel('bandFooter')));
         this.elDocContent.append(this.elFooter);
@@ -289,7 +289,7 @@ export default class Document {
                 }
                 if (imageCount >= this.rb.getProperty('imageLimit')) {
                     alert(this.rb.getLabel('docElementImageCountExceeded').replace(
-                      '${count}', this.rb.getProperty('imageLimit')));
+                        '${count}', this.rb.getProperty('imageLimit')));
                     return;
                 }
             }
@@ -505,7 +505,31 @@ export default class Document {
                         obj.data = self.pdfPreviewObjectURL;
                         self.elPdfPreview.append(obj);
                     } else {
-                        alert('preview failed');
+                        // Try to parse error response
+                        let errorMessage = 'Preview failed';
+                        const reader = new FileReader();
+                        reader.onload = function () {
+                            try {
+                                const errorData = JSON.parse(reader.result);
+                                if (errorData.detail) {
+                                    errorMessage = errorData.detail;
+                                } else if (errorData.error) {
+                                    errorMessage = errorData.error;
+                                } else if (errorData.message) {
+                                    errorMessage = errorData.message;
+                                } else {
+                                    errorMessage = `Preview failed: HTTP ${xhr.status}`;
+                                }
+                            } catch (e) {
+                                // If not JSON, show status text
+                                errorMessage = xhr.statusText || `Preview failed: HTTP ${xhr.status}`;
+                            }
+                            alert(errorMessage);
+                        };
+                        reader.onerror = function () {
+                            alert(`Preview failed: HTTP ${xhr.status}`);
+                        };
+                        reader.readAsText(xhr.response);
                     }
                 }
             };
@@ -595,7 +619,7 @@ export default class Document {
     }
 
     zoomIn() {
-        for (let i=0; i < this.zoomLevels.length - 1; i++) {
+        for (let i = 0; i < this.zoomLevels.length - 1; i++) {
             if (this.zoom === this.zoomLevels[i]) {
                 this.updateZoomLevel(this.zoomLevels[i + 1]);
                 break;
@@ -604,7 +628,7 @@ export default class Document {
     }
 
     zoomOut() {
-        for (let i=1; i < this.zoomLevels.length; i++) {
+        for (let i = 1; i < this.zoomLevels.length; i++) {
             if (this.zoom === this.zoomLevels[i]) {
                 this.updateZoomLevel(this.zoomLevels[i - 1]);
                 break;
@@ -673,7 +697,7 @@ export default class Document {
         // if there is enough space in the document panel don't show scrollbar
         if (scaledWidth < docPanelWidth) {
             this.elPanel.style.overflowX = 'hidden';
-        }  else {
+        } else {
             this.elPanel.style.overflowX = '';
         }
         if (scaledHeight < docPanelHeight) {
@@ -759,7 +783,7 @@ export default class Document {
             let selectedObjects = this.rb.getSelectedObjects();
             if (selectedObjects.length > 1 && container !== null) {
                 const firstSelectedObjContainerId = selectedObjects[0].getContainerId();
-                for (let i=1; i < selectedObjects.length; i++) {
+                for (let i = 1; i < selectedObjects.length; i++) {
                     if (selectedObjects[i].getContainerId() !== firstSelectedObjContainerId) {
                         container = null;
                         break;

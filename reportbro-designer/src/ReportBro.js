@@ -1495,7 +1495,10 @@ export default class ReportBro {
             }),
         }).then((response) => {
             if (!response.ok) {
-                throw Error(response.statusText);
+                // Return response to parse error details
+                return response.text().then(text => {
+                    throw { status: response.status, statusText: response.statusText, body: text };
+                });
             }
             if (self.properties.autoSaveOnPreview) {
                 self.save();
@@ -1515,17 +1518,61 @@ export default class ReportBro {
                     self.reportKey = null;
                     try {
                         let obj = JSON.parse(data);
-                        if (obj.errors.length > 0) {
+                        if (obj.errors && obj.errors.length > 0) {
                             self.processErrors(obj.errors, false);
+                        } else if (obj.detail) {
+                            // Show FastAPI error detail if present
+                            alert(obj.detail);
+                        } else if (obj.error) {
+                            // Show error field if present
+                            alert(obj.error);
+                        } else if (obj.message) {
+                            // Show message field if present
+                            alert(obj.message);
                         }
                     } catch (e) {
-                        alert('preview failed');
+                        // If JSON parsing fails, show the exception message and raw response data
+                        const errorMsg = e.message ? `Parse error: ${e.message}` : 'Preview failed: Unable to parse response';
+                        alert(data ? `${errorMsg}\n\nResponse: ${data}` : errorMsg);
                     }
                 }
             }).catch((error) => {
                 clearTimeout(timeoutId);
                 self.hideLoading();
-                alert('preview failed');
+
+                // Handle different error types
+                let errorMessage = 'Preview failed';
+
+                if (error.body) {
+                    try {
+                        // Try to parse error response as JSON
+                        const errorData = JSON.parse(error.body);
+
+                        // Check for FastAPI's detail field first (most common format)
+                        if (errorData.detail) {
+                            errorMessage = errorData.detail;
+                        } else if (errorData.error) {
+                            errorMessage = errorData.error;
+                        } else if (errorData.message) {
+                            errorMessage = errorData.message;
+                        } else if (errorData.errors && errorData.errors.length > 0) {
+                            // Process errors if available in error response
+                            self.processErrors(errorData.errors, false);
+                            return;
+                        } else {
+                            errorMessage = `Preview failed: ${error.statusText || 'Unknown error'}`;
+                        }
+                    } catch (e) {
+                        // If parsing fails, show the raw error body
+                        errorMessage = error.body;
+                    }
+                } else if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.toString().includes('AbortError')) {
+                    errorMessage = 'Preview failed: Request timeout';
+                }
+
+                alert(errorMessage);
             });
     }
 

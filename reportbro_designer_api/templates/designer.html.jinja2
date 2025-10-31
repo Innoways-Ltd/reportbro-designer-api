@@ -54,8 +54,13 @@ function saveReport() {
             rb.setModified(false);
         },
         error: function(jqXHR, textStatus, errorThrown) {
-            alert('saving report failed');
+        console.log(jqXHR, textStatus, errorThrown);
+        if(jqXHR.responseJSON && jqXHR.responseJSON.error) {
+            alert('saving report failed: ' + jqXHR.responseJSON.error);
+        } else {
+            alert('saving report failed: ' + errorThrown);
         }
+        },
     });
 }
 
