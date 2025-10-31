@@ -27,7 +27,7 @@ export function createElement(tagName, props, textContent) {
  * @param {HTMLElement} el - element which will be emptied, e.g. all child nodes are removed.
  */
 export function emptyElement(el) {
-    while(el.firstChild) {
+    while (el.firstChild) {
         el.removeChild(el.firstChild);
     }
 }
@@ -105,10 +105,10 @@ export function checkInputDecimal(val, min, max) {
 }
 
 export function convertInputToNumber(val) {
-    if (typeof(val) === 'number') {
+    if (typeof (val) === 'number') {
         return val;
     }
-    if (typeof(val) === 'string' && val !== '') {
+    if (typeof (val) === 'string' && val !== '') {
         let rv = parseFloat(val.replace(',', '.'));
         if (!isNaN(rv)) {
             return rv;
@@ -179,7 +179,7 @@ export function createColorPicker(elContainer, elInput, allowEmpty, rb) {
         elContainer.classList.remove('rbroActive');
     });
 
-    instance.documentClickListener = function(event) {
+    instance.documentClickListener = function (event) {
         let targetId = event.target.id;
         // close all open color palettes except if it was just opened by clicking the select button
         if (instance.shown && targetId !== instance.paletteId) {
@@ -188,7 +188,7 @@ export function createColorPicker(elContainer, elInput, allowEmpty, rb) {
         }
     };
     document.addEventListener('click', instance.documentClickListener);
-    instance.destroy = function() {
+    instance.destroy = function () {
         if (instance.documentClickListener) {
             document.removeEventListener('click', instance.documentClickListener);
             instance.documentClickListener = null;
@@ -257,7 +257,7 @@ export function getEventAbsPos(event) {
  */
 export function readImageData(file, loadCallback, rb) {
     const fileReader = new FileReader();
-    fileReader.onload = function(e) {
+    fileReader.onload = function (e) {
         const img = new Image();
         img.onload = function () {
             const canvas = document.createElement('canvas');
@@ -295,7 +295,7 @@ export function readImageData(file, loadCallback, rb) {
         }
         img.src = e.target.result;
     };
-    fileReader.onerror = function(e) {
+    fileReader.onerror = function (e) {
         alert(rb.getLabel('docElementLoadImageErrorMsg'));
     };
     fileReader.readAsDataURL(file);
@@ -620,4 +620,13 @@ function operate(operator, stack) {
  */
 export function evaluateExpression(input, obj) {
     return evalRPN(toRPN(tokenize(input, obj)));
+}
+
+// Returns true if the application is running inside an iframe.
+export const inIframe = () => {
+    try {
+        return window.self !== window.top
+    } catch (e) {
+        return true
+    }
 }
