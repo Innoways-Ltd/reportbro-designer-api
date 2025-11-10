@@ -1658,9 +1658,11 @@ class TableBandElement(object):
                 # try to render it on top of next page
                 self.prepare_container = True
                 if offset_y == 0:
-                    field = 'alwaysPrintOnSamePage' if self.band_type == BandType.content else 'size'
-                    raise ReportBroError(
-                        Error('errorMsgSectionBandNotOnSamePage', object_id=self.id, field=field))
+                    # If we're at the top of the page and still can't fit,
+                    # override the constraint and allow splitting across pages
+                    self.prepare_container = False
+                    self.rendering_complete = self.container.create_render_elements(
+                        container_top + offset_y, available_height, ctx=ctx, pdf_doc=pdf_doc)
             else:
                 self.prepare_container = False
 
@@ -1890,9 +1892,11 @@ class SectionBandElement(object):
                 # try to render it on top of next page
                 self.prepare_container = True
                 if offset_y == 0:
-                    field = 'size' if self.band_type == BandType.header else 'alwaysPrintOnSamePage'
-                    raise ReportBroError(
-                        Error('errorMsgSectionBandNotOnSamePage', object_id=self.id, field=field))
+                    # If we're at the top of the page and still can't fit,
+                    # override the constraint and allow splitting across pages
+                    self.prepare_container = False
+                    self.rendering_complete = self.container.create_render_elements(
+                        container_top + offset_y, available_height, ctx=ctx, pdf_doc=pdf_doc)
             else:
                 self.prepare_container = False
                 self.container.render_bottom = available_height
