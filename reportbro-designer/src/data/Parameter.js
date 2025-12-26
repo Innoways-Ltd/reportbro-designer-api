@@ -9,7 +9,7 @@ import MainPanelItem from '../menu/MainPanelItem';
  */
 export default class Parameter {
 
-    static dateRegex = /^(\d{4})-(\d{1,2})-(\d{1,2})( (\d{1,2}):(\d{2})(:(\d{2}))?)?$/;
+    static dateRegex = /^(\d{4})-(\d{1,2})-(\d{1,2})([T ](\d{1,2}):(\d{2})(:(\d{2}))?(Z|[+-]\d{2}:\d{2})?)?$/;
 
     constructor(id, initialData, rb) {
         this.rb = rb;
@@ -70,8 +70,9 @@ export default class Parameter {
                 // is updated dynamically
                 let panelItem = new MainPanelItem(
                     'parameter', this.panelItem, parameter, {
-                        hasChildren: !showOnlyNameType, showAdd: showAddDelete, showDelete: showAddDelete,
-                        draggable: true }, this.rb);
+                    hasChildren: !showOnlyNameType, showAdd: showAddDelete, showDelete: showAddDelete,
+                    draggable: true
+                }, this.rb);
                 parameter.setPanelItem(panelItem);
                 this.panelItem.appendChild(panelItem);
                 parameter.setup();
@@ -123,7 +124,7 @@ export default class Parameter {
         if (this.type === Parameter.type.array || this.type === Parameter.type.map) {
             const children = this.children.slice();
             let i = 0;
-            while ( i < children.length) {
+            while (i < children.length) {
                 const child = children[i];
                 if (child.id > maxId) {
                     maxId = child.id;
@@ -279,7 +280,7 @@ export default class Parameter {
     addUpdateTestDataCmdForChangedParameterName(newParameterName, parents, cmdGroup) {
         const rootParent = (parents.length > 0) ? parents[0] : null;
         if (rootParent !== null &&
-                (rootParent.type === Parameter.type.array || rootParent.type === Parameter.type.map)) {
+            (rootParent.type === Parameter.type.array || rootParent.type === Parameter.type.map)) {
             // update test data of root parameter because test data is only set for root parameters
             try {
                 const testData = rootParent.getTestData(true);
@@ -322,9 +323,9 @@ export default class Parameter {
      */
     addCommandsForChangedParameterType(newParameterType, cmdGroup) {
         if (this.type === Parameter.type.array || this.type === Parameter.type.simpleArray ||
-                this.type === Parameter.type.map ||
-                newParameterType === Parameter.type.array || newParameterType === Parameter.type.simpleArray ||
-                newParameterType === Parameter.type.map) {
+            this.type === Parameter.type.map ||
+            newParameterType === Parameter.type.array || newParameterType === Parameter.type.simpleArray ||
+            newParameterType === Parameter.type.map) {
             // clear test data if parameter type is changed from or to array / simpleArray / map, the test data
             // is saved in the same field but the test data format is different depending on the parameter type
             const cmd = new SetValueCmd(this.getId(), 'testData', '', SetValueCmd.type.text, this.rb);
@@ -409,13 +410,15 @@ export default class Parameter {
             if (parametersToAppend.length > 0) {
                 parameters.push({
                     separator: true, id: this.id,
-                    separatorClass: 'rbroParameterGroup', name: parameterPrefix + this.name });
+                    separatorClass: 'rbroParameterGroup', name: parameterPrefix + this.name
+                });
                 for (const parameter of parametersToAppend) {
                     const paramName = parameterPrefix + this.name + '.' + parameter.getName();
                     parameters.push({
                         name: paramName, nameLowerCase: paramName.toLowerCase(),
                         id: parameter.getId(), description: '',
-                        dataSourceName: dataSourceName });
+                        dataSourceName: dataSourceName
+                    });
                 }
             }
             // append nested map parameters after other parameters of the map
@@ -468,7 +471,7 @@ export default class Parameter {
             for (let child of this.panelItem.getChildren()) {
                 let parameter = child.getData();
                 if (!Array.isArray(allowedTypes) ||
-                        allowedTypes.indexOf(parameter.getValue('type')) !== -1) {
+                    allowedTypes.indexOf(parameter.getValue('type')) !== -1) {
                     if (relative) {
                         if (firstRowParam) {
                             parameters.push({
@@ -508,7 +511,7 @@ export default class Parameter {
     getParameterFields() {
         const fields = [];
         if (this.type === Parameter.type.array || this.type === Parameter.type.simpleArray ||
-                this.type === Parameter.type.map) {
+            this.type === Parameter.type.map) {
             if (this.type === Parameter.type.simpleArray) {
                 fields.push({ name: 'data', type: this.arrayItemType, parameter: this });
             } else {
@@ -536,7 +539,7 @@ export default class Parameter {
         } catch (e) {
         }
         if (this.type === Parameter.type.array || this.type === Parameter.type.simpleArray ||
-                this.type === Parameter.type.map) {
+            this.type === Parameter.type.map) {
             if (testData) {
                 return Parameter.getSanitizedTestData(this, testData, editFormat);
             }
@@ -634,14 +637,14 @@ export default class Parameter {
             }
         } else if (fieldType === Parameter.type.date) {
             if (typeof testData === 'string') {
-                // we allow dates in format "YYYY-MM-DD", "YYYY-MM-DD HH:MM" and "YYYY-MM-DD HH:MM:SS" for test data
+                // we allow dates in format "YYYY-MM-DD", "YYYY-MM-DD HH:MM" and "YYYY-MM-DD HH:MM:SS" and ISO 8601 with T/Z for test data
                 if (Parameter.dateRegex.test(testData)) {
                     rv = testData;
                 }
             }
         } else if (fieldType === Parameter.type.image) {
             if (!testData || Object.getPrototypeOf(testData) !== Object.prototype ||
-                    !('data' in testData) || !('filename' in testData)) {
+                !('data' in testData) || !('filename' in testData)) {
                 if (editFormat) {
                     rv = { data: '', filename: '' };
                 } else {

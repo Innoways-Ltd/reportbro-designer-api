@@ -89,6 +89,14 @@ rb = new ReportBro(document.getElementById('reportbro'), {
     ],
     showPlusFeatures: true,
     showPlusFeaturesInfo: false,
+     patternAdditionalDates:[
+        {
+            name: 'H:mm:ss', description: 'hour:minute:second (24-hour format), e.g. 14:30:45'
+        },
+        {
+            name: 'H:mm', description: 'hour:minute (24-hour format), e.g. 14:30'
+        }
+    ]
 });
 if (report) {
     rb.load(report);
