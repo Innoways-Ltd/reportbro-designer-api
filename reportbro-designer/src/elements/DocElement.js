@@ -35,6 +35,7 @@ export default class DocElement {
         this.heightVal = 0;
 
         this.errors = [];
+        this.insertionOrder = 0;  // used for z-index layering
     }
 
     setInitialData(initialData) {
@@ -54,6 +55,11 @@ export default class DocElement {
         this.yVal = utils.convertInputToNumber(this.y);
         this.widthVal = utils.convertInputToNumber(this.width);
         this.heightVal = utils.convertInputToNumber(this.height);
+
+        // Ensure insertionOrder is set (defaults to 0 if not in initialData)
+        if (typeof this.insertionOrder === 'undefined') {
+            this.insertionOrder = 0;
+        }
     }
 
     /**
@@ -257,6 +263,8 @@ export default class DocElement {
     appendToContainer() {
         let container = this.getContainer();
         if (container !== null) {
+            // Store reference to this DocElement on the DOM element for z-index ordering
+            this.el.__docElement = this;
             container.appendElement(this.el);
         }
     }
@@ -315,7 +323,7 @@ export default class DocElement {
             if ((x + width) > containerSize.width) {
                 x = containerSize.width - width;
             }
-            if (x < 0)  {
+            if (x < 0) {
                 x = 0;
             }
             if ((x + width) > containerSize.width) {
@@ -324,7 +332,7 @@ export default class DocElement {
             if ((y + height) > containerSize.height) {
                 y = containerSize.height - height;
             }
-            if (y < 0)  {
+            if (y < 0) {
                 y = 0;
             }
             if ((y + height) > containerSize.height) {
@@ -401,10 +409,10 @@ export default class DocElement {
             // other container but x, y, width, height and so on stay unchanged)
             this.updateDisplay();
         } else if (['styleId', 'bold', 'italic', 'underline', 'strikethrough',
-                'horizontalAlignment', 'verticalAlignment',
-                'textColor', 'backgroundColor', 'font', 'fontSize', 'lineSpacing', 'borderColor', 'borderWidth',
-                'borderAll', 'borderLeft', 'borderTop', 'borderRight', 'borderBottom',
-                'paddingLeft', 'paddingTop', 'paddingRight', 'paddingBottom'].indexOf(field) !== -1) {
+            'horizontalAlignment', 'verticalAlignment',
+            'textColor', 'backgroundColor', 'font', 'fontSize', 'lineSpacing', 'borderColor', 'borderWidth',
+            'borderAll', 'borderLeft', 'borderTop', 'borderRight', 'borderBottom',
+            'paddingLeft', 'paddingTop', 'paddingRight', 'paddingBottom'].indexOf(field) !== -1) {
 
             this.updateStyle();
 
@@ -516,7 +524,7 @@ export default class DocElement {
                         if (value !== this.getValue(objField)) {
                             const propertyDescriptor = propertyDescriptors[objField];
                             const cmd = new SetValueCmd(
-                              this.getId(), objField, value, propertyDescriptor['type'], this.rb);
+                                this.getId(), objField, value, propertyDescriptor['type'], this.rb);
                             cmd.disableSelect();
                             cmdGroup.addCommand(cmd);
                         }
@@ -561,7 +569,7 @@ export default class DocElement {
         } else {
             let containerSize = this.getContainerContentSize();
             if (dragType === DocElement.dragType.sizerNW || dragType === DocElement.dragType.sizerN ||
-                    dragType === DocElement.dragType.sizerNE) {
+                dragType === DocElement.dragType.sizerNE) {
                 dragY = posY1 + diffY;
                 if (gridSize !== 0) {
                     dragY = utils.roundValueToInterval(dragY, gridSize);
@@ -578,7 +586,7 @@ export default class DocElement {
                 rv.y = dragY - posY1;
             }
             if (dragType === DocElement.dragType.sizerNE || dragType === DocElement.dragType.sizerE ||
-                    dragType === DocElement.dragType.sizerSE) {
+                dragType === DocElement.dragType.sizerSE) {
                 dragX = posX2 + diffX;
                 if (gridSize !== 0) {
                     dragX = utils.roundValueToInterval(dragX, gridSize);
@@ -595,7 +603,7 @@ export default class DocElement {
                 rv.x = dragX - posX2;
             }
             if (dragType === DocElement.dragType.sizerSE || dragType === DocElement.dragType.sizerS ||
-                    dragType === DocElement.dragType.sizerSW) {
+                dragType === DocElement.dragType.sizerSW) {
                 dragY = posY2 + diffY;
                 if (gridSize !== 0) {
                     dragY = utils.roundValueToInterval(dragY, gridSize);
@@ -612,7 +620,7 @@ export default class DocElement {
                 rv.y = dragY - posY2;
             }
             if (dragType === DocElement.dragType.sizerSW || dragType === DocElement.dragType.sizerW ||
-                    dragType === DocElement.dragType.sizerNW) {
+                dragType === DocElement.dragType.sizerNW) {
                 dragX = posX1 + diffX;
                 if (gridSize !== 0) {
                     dragX = utils.roundValueToInterval(dragX, gridSize);
@@ -685,7 +693,7 @@ export default class DocElement {
         if (cmdGroup !== null) {
             let containerChanged = false;
             let container = this.getContainer();
-            let containerSize = { width: 0, height: 0};
+            let containerSize = { width: 0, height: 0 };
             if (dragContainer !== null && dragContainer.getId() !== this.getContainerId()) {
                 containerChanged = true;
                 containerSize = dragContainer.getContentSize();
@@ -880,7 +888,7 @@ export default class DocElement {
         if (this.hasDataSource()) {
             const dataSource = this.getValue('dataSource').trim();
             if (dataSource.length >= 3 && dataSource.substring(0, 2) === '${' &&
-                    dataSource.charAt(dataSource.length - 1) === '}') {
+                dataSource.charAt(dataSource.length - 1) === '}') {
                 return dataSource.substring(2, dataSource.length - 1);
             }
         }
@@ -1134,6 +1142,8 @@ export default class DocElement {
                 rv[field] = this.getValue(field + 'Val');
             }
         }
+        // Always include insertionOrder for z-index layering
+        rv['insertionOrder'] = this.insertionOrder;
         return rv;
     }
 }

@@ -54,6 +54,27 @@ export default class MovePanelItemCmd extends Command {
             obj.getPanelItem().moveToPosition(parent.getPanelItem(), toPosition);
             obj.getPanelItem().openParentItems();
             this.rb.notifyEvent(obj, Command.operation.move);
+
+            // Recalculate insertion order for affected containers after moving element
+            if (obj instanceof DocElement) {
+                // Get old container using the tracked ID
+                let oldContainer = null;
+                if (this.oldContainerId) {
+                    oldContainer = this.rb.getDataObject(this.oldContainerId);
+                }
+
+                const newContainer = obj.getContainer();
+
+                // Recalculate for the new container
+                if (newContainer) {
+                    this.rb.recalculateInsertionOrder(newContainer);
+                }
+
+                // If moved to a different container, also recalculate the old container
+                if (oldContainer && oldContainer !== newContainer) {
+                    this.rb.recalculateInsertionOrder(oldContainer);
+                }
+            }
         }
     }
 

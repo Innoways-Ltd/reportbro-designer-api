@@ -48,7 +48,37 @@ export default class Container {
 
     appendElement(el) {
         if (this.elContent !== null) {
-            this.elContent.append(el);
+            // Insert elements based on their insertion order for proper z-index layering
+            // Earlier inserted elements (lower insertionOrder) should be in DOM first (bottom layer)
+            // Later inserted elements (higher insertionOrder) should be in DOM last (top layer)
+            const elementToInsert = el;
+            const elementData = el.__docElement;  // Store reference to doc element on DOM element
+
+            if (elementData && typeof elementData.insertionOrder !== 'undefined') {
+                let inserted = false;
+                const children = Array.from(this.elContent.children);
+
+                for (let i = 0; i < children.length; i++) {
+                    const child = children[i];
+                    const childData = child.__docElement;
+
+                    if (childData && typeof childData.insertionOrder !== 'undefined') {
+                        // Insert before elements with higher insertion order
+                        if (elementData.insertionOrder < childData.insertionOrder) {
+                            this.elContent.insertBefore(elementToInsert, child);
+                            inserted = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!inserted) {
+                    this.elContent.append(elementToInsert);
+                }
+            } else {
+                // Fallback: append normally if no insertion order data
+                this.elContent.append(elementToInsert);
+            }
         }
     }
 

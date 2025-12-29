@@ -22,7 +22,9 @@ class DocElementBase(object):
         self.rendering_complete = False
         self.predecessors = []
         self.successors = []
-        self.sort_order = 1  # sort order for elements with same 'y'-value
+        # sort_order is used for z-index layering. Lower values render first (bottom layer).
+        # It comes from insertionOrder in the designer.
+        self.sort_order = get_int_value(data, 'insertionOrder') if 'insertionOrder' in data else 1
 
     def is_predecessor(self, elem):
         """Returns true if the given element is a direct predecessor of this element.

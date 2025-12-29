@@ -37,6 +37,7 @@ export default class ReportBro {
     constructor(element, properties) {
         this.element = element;
         this.nextId = 1;
+        this.elementInsertionCounter = 0;  // tracks insertion order for z-index layering
         this.locale = locales[(properties && properties.localeKey) || 'en_us'];
         if (properties && properties['locale']) {
             Object.assign(this.locale, properties['locale']);
@@ -1265,6 +1266,102 @@ export default class ReportBro {
         this.addDataObject(container);
     }
 
+    /**
+     * Recalculates insertion order for all doc elements in a container based on their
+     * current order in the panel. This is called when elements are reordered by dragging.
+     * @param {Container} container - the container whose elements should have their insertion order recalculated
+     */
+    recalculateInsertionOrder(container) {
+        if (!container || !container.getPanelItem()) {
+            return;
+        }
+
+        const children = container.getPanelItem().getChildren();
+        const docElements = [];
+
+        // Collect all doc elements from the panel in their current order
+        for (const child of children) {
+            const data = child.getData();
+            if (data instanceof DocElement) {
+                docElements.push(data);
+            }
+        }
+
+        // Reassign insertion orders based on current panel position
+        // Elements at the top get lower insertion order (render first/bottom layer)
+        // Elements at the bottom get higher insertion order (render last/top layer)
+        for (let i = 0; i < docElements.length; i++) {
+            docElements[i].insertionOrder = i;
+        }
+
+        // Update the counter to be higher than any assigned value
+        if (docElements.length > 0) {
+            this.elementInsertionCounter = docElements.length;
+        }
+
+        // Re-render elements in the container to apply new layering
+        for (const docElement of docElements) {
+            const el = docElement.getElement();
+            if (el && el.parentElement) {
+                // Remove and re-add to apply new insertion order
+                el.parentElement.removeChild(el);
+                docElement.appendToContainer();
+            }
+        }
+    }
+
+    /**
+     * Assigns insertionOrder to elements that are missing it (from older reports)
+     * based on their current panel order. This ensures backward compatibility.
+     */
+    assignMissingInsertionOrders() {
+        let globalCounter = 0;
+
+        // Process all containers (header, content, footer)
+        const containers = [this.headerBand, this.contentBand, this.footerBand];
+
+        for (const container of containers) {
+            if (!container || !container.getPanelItem()) {
+                continue;
+            }
+
+            const children = container.getPanelItem().getChildren();
+
+            for (const child of children) {
+                const data = child.getData();
+                if (data instanceof DocElement) {
+                    // If insertionOrder is 0 or undefined, assign it
+                    if (!data.insertionOrder || data.insertionOrder === 0) {
+                        data.insertionOrder = globalCounter;
+                    }
+                    globalCounter++;
+                }
+            }
+        }
+
+        // Also process watermark containers
+        const watermarkContainers = [this.watermarkTextContainer, this.watermarkImageContainer];
+
+        for (const container of watermarkContainers) {
+            if (!container || !container.getPanelItem()) {
+                continue;
+            }
+
+            const children = container.getPanelItem().getChildren();
+
+            for (const child of children) {
+                const data = child.getData();
+                if (data instanceof DocElement) {
+                    // If insertionOrder is 0 or undefined, assign it
+                    if (!data.insertionOrder || data.insertionOrder === 0) {
+                        data.insertionOrder = globalCounter;
+                    }
+                    globalCounter++;
+                }
+            }
+        }
+    }
+
     deleteContainer(container) {
         for (let i = 0; i < this.containers.length; i++) {
             if (this.containers[i].getId() === container.getId()) {
@@ -1963,6 +2060,7 @@ export default class ReportBro {
         this.deleteDocElements();
 
         this.nextId = 1;
+        this.elementInsertionCounter = 0;
         this.docElements = [];
         this.objectMap = {};
         this.initObjectMap();
@@ -2027,6 +2125,19 @@ export default class ReportBro {
         for (const watermarkData of report.watermarks) {
             this.createDocElement(watermarkData);
         }
+
+        // Assign insertionOrder to elements that don't have it (from older reports)
+        // based on their current panel order
+        this.assignMissingInsertionOrders();
+
+        // Update elementInsertionCounter to be greater than any loaded insertionOrder
+        let maxInsertionOrder = 0;
+        for (const docElement of this.docElements) {
+            if (docElement.insertionOrder > maxInsertionOrder) {
+                maxInsertionOrder = docElement.insertionOrder;
+            }
+        }
+        this.elementInsertionCounter = maxInsertionOrder + 1;
 
         if (this.getProperty('highlightUnusedParameters')) {
             // highlight unused parameters when report is loaded
