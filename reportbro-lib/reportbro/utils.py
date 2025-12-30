@@ -42,10 +42,15 @@ def parse_datetime_string(val):
         if val_normalized.endswith('Z'):
             val_normalized = val_normalized[:-1]
             colon_count = val_normalized.count(':')
+            # Check for milliseconds/microseconds
+            has_decimal = '.' in val_normalized
             if colon_count == 1:
-                return datetime.datetime.strptime(val_normalized, '%Y-%m-%d %H:%M')
+                date_format = '%Y-%m-%d %H:%M.%f' if has_decimal else '%Y-%m-%d %H:%M'
             elif colon_count == 2:
-                return datetime.datetime.strptime(val_normalized, '%Y-%m-%d %H:%M:%S')
+                date_format = '%Y-%m-%d %H:%M:%S.%f' if has_decimal else '%Y-%m-%d %H:%M:%S'
+            else:
+                date_format = '%Y-%m-%d'
+            return datetime.datetime.strptime(val_normalized, date_format)
         
         # Handle timezone offset (e.g., +08:00 or -05:00)
         if '+' in val_normalized or val_normalized.count('-') > 2:
@@ -56,10 +61,12 @@ def parse_datetime_string(val):
                 val_normalized = val_normalized[:tz_sep_idx].strip()
         
         colon_count = val_normalized.count(':')
+        # Check for milliseconds/microseconds
+        has_decimal = '.' in val_normalized
         if colon_count == 1:
-            date_format = '%Y-%m-%d %H:%M'
+            date_format = '%Y-%m-%d %H:%M.%f' if has_decimal else '%Y-%m-%d %H:%M'
         elif colon_count == 2:
-            date_format = '%Y-%m-%d %H:%M:%S'
+            date_format = '%Y-%m-%d %H:%M:%S.%f' if has_decimal else '%Y-%m-%d %H:%M:%S'
         else:
             date_format = '%Y-%m-%d'
         return datetime.datetime.strptime(val_normalized, date_format)

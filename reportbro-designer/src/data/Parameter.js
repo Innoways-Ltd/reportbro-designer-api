@@ -9,7 +9,7 @@ import MainPanelItem from '../menu/MainPanelItem';
  */
 export default class Parameter {
 
-    static dateRegex = /^(\d{4})-(\d{1,2})-(\d{1,2})([T ](\d{1,2}):(\d{2})(:(\d{2}))?(Z|[+-]\d{2}:\d{2})?)?$/;
+    static dateRegex = /^(\d{4})-(\d{1,2})-(\d{1,2})([T ](\d{1,2}):(\d{2})(:(\d{2}))?(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
 
     constructor(id, initialData, rb) {
         this.rb = rb;
