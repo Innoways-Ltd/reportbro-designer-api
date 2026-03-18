@@ -49,10 +49,11 @@ class Container(object):
                     self.sorted_elements.append(elem)
 
         if pdf_doc:
-            # Sort by sort_order (insertion order) to respect content list order for z-layering
-            # Lower sort_order means element was added earlier and should render first (bottom layer)
-            # Higher sort_order means element was added later and should render last (top layer)
-            self.sorted_elements = sorted(self.sorted_elements, key=lambda item: item.sort_order)
+            # Sort by y-position first (correct page layout), then by sort_order as tiebreaker
+            # (z-layering for overlapping elements at the same y-position).
+            # Sorting by sort_order alone caused page breaks to sort first (sort_order=0)
+            # regardless of their y-position, leading to an infinite page loop.
+            self.sorted_elements = sorted(self.sorted_elements, key=lambda item: (item.y, item.sort_order))
             # predecessors are only needed for rendering pdf document
             for i, elem in enumerate(self.sorted_elements):
                 for j in range(i-1, -1, -1):
