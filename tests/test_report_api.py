@@ -79,3 +79,17 @@ def test_padding_data(debug_env):
         "gstring_value": "",
         "gnumber_value": 1,
     }
+
+    # Array params can arrive as a single object in some clients.
+    data = {
+        "list_value": {
+            "lstring_value": "111",
+        },
+    }
+    fill_default(data_json, data)
+    assert data["list_value"] == [
+        {
+            "lnumber_value": 0.0,
+            "lstring_value": "111",
+        }
+    ]

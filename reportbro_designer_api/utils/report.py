@@ -63,21 +63,36 @@ def fill_default(report_definition, data):
         _type = _parame["type"]
         _name = _parame["name"]
 
-        # Fix: handle both dict and list types for _data
-        if isinstance(_data, dict):
-            if _data.get(_name, None):
-                if _type == "map":
-                    for ppp in _loop_params(_parame["children"]):
-                        _fill_default(ppp, _data[_name])
-                elif _type == "array":
-                    for ppp in _loop_params(_parame["children"]):
-                        for data_item in _data[_name]:
-                            _fill_default(ppp, data_item)
-                return
-        elif isinstance(_data, list):
-            # If _data is a list, apply fill_default to each item
+        if isinstance(_data, list):
             for item in _data:
                 _fill_default(_parame, item)
+            return
+        if not isinstance(_data, dict):
+            return
+
+        value = _data.get(_name, None)
+
+        if _type == "map" and isinstance(value, dict):
+            for ppp in _loop_params(_parame["children"]):
+                _fill_default(ppp, value)
+            return
+
+        if _type == "array":
+            if isinstance(value, dict):
+                value = [value]
+                _data[_name] = value
+            elif not isinstance(value, list):
+                value = None
+
+            if isinstance(value, list):
+                normalized_items = [item if isinstance(item, dict) else {} for item in value]
+                _data[_name] = normalized_items
+                for ppp in _loop_params(_parame["children"]):
+                    for data_item in normalized_items:
+                        _fill_default(ppp, data_item)
+                return
+
+        if value not in (None, ""):
             return
 
         nullable = _parame.get("nullable", False)
@@ -89,7 +104,7 @@ def fill_default(report_definition, data):
         elif _type == "boolean":
             _data[_name] = False if not nullable else None
         elif _type == "date":
-            _data[_name] = None if not nullable else None
+            _data[_name] = "1900-01-01" if not nullable else None
         elif _type in ["simple_array", "array"]:
             _data[_name] = []
         elif _type == "image":
@@ -233,7 +248,8 @@ class ReportFontsLoader(object):
                 if "filename" not in paths_map:
                     paths_map["filename"] = i[0]
 
-            if len(paths_map) > 1:
+            # Keep legacy behavior: only expose complete light/regular/bold families.
+            if len(paths_map) > 1 and "light_filename" in paths_map:
                 # Ensure all required style variants are set for reportbro compatibility
                 # This prevents "fname parameter is required" errors when styles are missing
                 base_filename = paths_map.get("filename", "")
