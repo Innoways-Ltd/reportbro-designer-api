@@ -249,7 +249,7 @@ class ReportFontsLoader(object):
                     paths_map["filename"] = i[0]
 
             # Keep legacy behavior: only expose complete light/regular/bold families.
-            if len(paths_map) > 1 and "light_filename" in paths_map:
+            if len(paths_map) > 1:
                 # Ensure all required style variants are set for reportbro compatibility
                 # This prevents "fname parameter is required" errors when styles are missing
                 base_filename = paths_map.get("filename", "")
