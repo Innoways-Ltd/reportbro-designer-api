@@ -1610,7 +1610,12 @@ export default class ReportBro {
                     const url = new URL(requestParams.reportServerUrl, document.location);
                     url.searchParams.set('key', self.reportKey);
                     url.searchParams.set('outputFormat', 'pdf');
-                    self.getDocument().openPdfPreviewTab(url.toString(), headers);
+                    // Strip Content-Type from preview headers — it was only needed for the PUT
+                    // request body. Passing it here would force the XHR/blob-URL path, which
+                    // causes Chrome to assign a UUID filename instead of using the PDF title.
+                    const previewHeaders = Object.assign({}, headers);
+                    delete previewHeaders['Content-Type'];
+                    self.getDocument().openPdfPreviewTab(url.toString(), previewHeaders);
                 } else {
                     self.reportKey = null;
                     try {

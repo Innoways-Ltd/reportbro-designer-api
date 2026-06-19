@@ -306,6 +306,8 @@ class DocumentProperties:
             self.content_height = self.page_height - self.header_size - self.footer_size -\
                 self.margin_top - self.margin_bottom
 
+        self.report_name = data.get('reportName', '')
+
         creation_date = data.get('creationDate')
         if creation_date:
             self.creation_date = parse_datetime_string(creation_date)

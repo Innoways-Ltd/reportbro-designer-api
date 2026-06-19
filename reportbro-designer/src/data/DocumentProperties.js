@@ -39,6 +39,8 @@ export default class DocumentProperties {
 
         this.watermark = false;
 
+        this.reportName = '';
+
         this.patternLocale = rb.getProperty('patternLocale');
         this.patternCurrencySymbol = rb.getProperty('patternCurrencySymbol');
         this.patternNumberGroupSymbol = rb.getProperty('patternNumberGroupSymbol');
@@ -86,6 +88,7 @@ export default class DocumentProperties {
             'contentHeight', 'marginLeft', 'marginTop', 'marginRight', 'marginBottom',
             'header', 'headerSize', 'headerDisplay', 'footer', 'footerSize', 'footerDisplay',
             'watermark', 'patternLocale', 'patternCurrencySymbol', 'patternNumberGroupSymbol',
+            'reportName',
         ];
     }
 

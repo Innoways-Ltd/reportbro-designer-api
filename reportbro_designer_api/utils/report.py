@@ -304,8 +304,6 @@ class ReportPdf(object):
             core_fonts_encoding="utf8",
         )
         if title:
-            renderer.pdf_doc.set_title(
-                "_".join([title, datetime.datetime.now().strftime("%Y%m%dT%H%M%S")])
-            )
+            renderer.pdf_doc.set_title(title)
 
         return renderer.render()

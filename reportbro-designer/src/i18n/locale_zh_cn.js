@@ -213,6 +213,7 @@ const locale_zh = {
     parameters: "参数",
     parametersDataSource: "数据源参数",
     parametersDataSourceName: '${name} 参数',
+    reportName: "报告名称",
     patternCurrencySymbol: "货币符号",
     patternDate1: "日.月.年,例如1.6.1980",
     patternDate2: "日.月.年,小时（24h）:分钟,例如1.6.80,14:30",

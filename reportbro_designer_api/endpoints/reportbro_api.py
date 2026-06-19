@@ -10,6 +10,7 @@
 import asyncio
 import json
 import os
+import re
 import traceback
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
@@ -629,16 +630,33 @@ def gen_file_from_report(
         )
 
     start = timer()
-    now = datetime.now().strftime("%Y%m%d%H%M%S")
+    now = datetime.now().strftime("%Y%m%dT%H%M%S")
+
+    base_name = "report"
+    raw_report_name = report.report.document_properties.report_name
+    if raw_report_name:
+        try:
+            resolved = report.report.context.fill_parameters(
+                raw_report_name, '0_document_properties', 'reportName')
+            safe = re.sub(r'[^\w\s\-.]', '', resolved).strip()
+            if safe:
+                base_name = safe
+        except Exception:
+            raw_stripped = re.sub(r'\$\{[^}]*\}', '', raw_report_name).strip()
+            if raw_stripped:
+                base_name = re.sub(r'[^\w\s\-.]', '', raw_stripped).strip() or "report"
+
+    filename_stem = f"{base_name} - {now}"
+
     try:
         if output_format == "pdf":
-            report_file = report.generate_pdf(title=settings.PDF_TITLE)
-            filename = "report-" + str(now) + ".pdf"
+            report_file = report.generate_pdf(title=filename_stem)
+            filename = f"{filename_stem}.pdf"
             assert isinstance(report_file, bytearray)
             return filename, bytes(report_file)
         else:
             report_file = report.generate_xlsx()
-            filename = "report-" + str(now) + ".xlsx"
+            filename = f"{filename_stem}.xlsx"
             assert isinstance(report_file, bytearray)
             return filename, bytes(report_file)
     except (ReportBroError, ReportBroInternalError, ReportBroLibError) as ex:

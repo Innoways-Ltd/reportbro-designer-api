@@ -1,6 +1,7 @@
 import PanelBase from './PanelBase';
 import SetValueCmd from '../commands/SetValueCmd';
 import DocumentProperties from '../data/DocumentProperties';
+import PopupWindow from '../PopupWindow';
 import * as utils from '../utils';
 
 /**
@@ -12,6 +13,10 @@ export default class DocumentPropertiesPanel extends PanelBase {
         super('rbro_document_properties', DocumentProperties, rootElement, rb);
 
         this.propertyDescriptors = {
+            'reportName': {
+                'type': SetValueCmd.type.text,
+                'fieldId': 'report_name',
+            },
             'pageFormat': {
                 'type': SetValueCmd.type.text,
                 'fieldId': 'page_format',
@@ -118,9 +123,38 @@ export default class DocumentPropertiesPanel extends PanelBase {
 
     render(data) {
         let panel = utils.createElement('div', { id: 'rbro_document_properties_panel', class: 'rbroHidden' });
-        let elDiv = utils.createElement('div', { id: 'rbro_document_properties_page_row', class: 'rbroFormRow' });
-        utils.appendLabel(elDiv, this.rb.getLabel('pageFormat'), 'rbro_document_properties_page_format');
+
+        let elDiv = utils.createElement('div', { id: 'rbro_document_properties_report_name_row', class: 'rbroFormRow' });
+        utils.appendLabel(elDiv, this.rb.getLabel('reportName'), 'rbro_document_properties_report_name');
         let elFormField = utils.createElement('div', { class: 'rbroFormField' });
+        let elSplit = utils.createElement('div', { class: 'rbroSplit rbroSelector' });
+        let elReportName = utils.createElement('input', {
+            id: 'rbro_document_properties_report_name', type: 'text', autocomplete: 'off'
+        });
+        elReportName.addEventListener('input', (event) => {
+            let selectedObject = this.rb.getSelectedObject();
+            if (selectedObject !== null) {
+                let cmd = new SetValueCmd(
+                    selectedObject.getId(), 'reportName', elReportName.value,
+                    SetValueCmd.type.text, this.rb);
+                this.rb.executeCommand(cmd);
+            }
+        });
+        elSplit.append(elReportName);
+        let elReportNameButton = utils.createElement('div', { class: 'rbroButton rbroRoundButton rbroIcon-select' });
+        elReportNameButton.addEventListener('click', (event) => {
+            this.rb.getPopupWindow().show(
+                this.rb.getParameterItems(null, null), null,
+                'rbro_document_properties_report_name', 'reportName', PopupWindow.type.parameterAppend);
+        });
+        elSplit.append(elReportNameButton);
+        elFormField.append(elSplit);
+        elDiv.append(elFormField);
+        panel.append(elDiv);
+
+        elDiv = utils.createElement('div', { id: 'rbro_document_properties_page_row', class: 'rbroFormRow' });
+        utils.appendLabel(elDiv, this.rb.getLabel('pageFormat'), 'rbro_document_properties_page_format');
+        elFormField = utils.createElement('div', { class: 'rbroFormField' });
         let elPageFormat = utils.createElement('select', { id: 'rbro_document_properties_page_format' });
         elPageFormat.append(utils.createElement('option', { value: 'A4' }, this.rb.getLabel('pageFormatA4')));
         elPageFormat.append(utils.createElement('option', { value: 'A5' }, this.rb.getLabel('pageFormatA5')));
