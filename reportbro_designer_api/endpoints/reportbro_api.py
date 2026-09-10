@@ -12,6 +12,7 @@ import json
 import os
 import re
 import traceback
+import uuid
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from enum import Enum
@@ -647,16 +648,18 @@ def gen_file_from_report(
                 base_name = re.sub(r'[^\w\s\-.]', '', raw_stripped).strip() or "report"
 
     filename_stem = f"{base_name} - {now}"
+    # avoid same-second filename collisions
+    unique_suffix = uuid.uuid4().hex[:8]
 
     try:
         if output_format == "pdf":
             report_file = report.generate_pdf(title=filename_stem)
-            filename = f"{filename_stem}.pdf"
+            filename = f"{filename_stem}-{unique_suffix}.pdf"
             assert isinstance(report_file, bytearray)
             return filename, bytes(report_file)
         else:
             report_file = report.generate_xlsx()
-            filename = f"{filename_stem}.xlsx"
+            filename = f"{filename_stem}-{unique_suffix}.xlsx"
             assert isinstance(report_file, bytearray)
             return filename, bytes(report_file)
     except (ReportBroError, ReportBroInternalError, ReportBroLibError) as ex:
